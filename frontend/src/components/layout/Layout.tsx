@@ -9,20 +9,34 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
 
+  const toggleSidebarCollapse = () => {
+    setSidebarCollapsed(!sidebarCollapsed);
+  };
+
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
       {/* Sidebar */}
-      <Sidebar isOpen={sidebarOpen} onToggle={toggleSidebar} />
+      <Sidebar 
+        isOpen={sidebarOpen} 
+        onToggle={toggleSidebar}
+        isCollapsed={sidebarCollapsed}
+        onCollapseToggle={toggleSidebarCollapse}
+      />
       
       {/* Main Content Area */}
-      <div className="flex flex-col flex-1 min-w-0">
+      <div className={`flex flex-col flex-1 min-w-0 transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-0' : ''}`}>
         {/* Header */}
-        <Header onMenuClick={toggleSidebar} />
+        <Header 
+          onMenuClick={toggleSidebar}
+          onCollapseClick={toggleSidebarCollapse}
+          isSidebarCollapsed={sidebarCollapsed}
+        />
         
         {/* Page Content */}
         <main className="flex-1 overflow-auto bg-gray-50 p-6">
@@ -31,14 +45,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
         </main>
       </div>
-
-      {/* Mobile Overlay */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
-          onClick={toggleSidebar}
-        />
-      )}
     </div>
   );
 };

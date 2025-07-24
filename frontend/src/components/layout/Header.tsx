@@ -5,16 +5,20 @@ import {
   BellIcon,
   UserCircleIcon,
   Cog6ToothIcon,
-  ArrowRightOnRectangleIcon
+  ArrowRightOnRectangleIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSweetAlert } from '../../hooks/useSweetAlert';
 
 interface HeaderProps {
   onMenuClick: () => void;
+  onCollapseClick: () => void;
+  isSidebarCollapsed: boolean;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
+export const Header: React.FC<HeaderProps> = ({ onMenuClick, onCollapseClick, isSidebarCollapsed }) => {
   const { user, logout } = useAuth();
   const { showConfirm } = useSweetAlert();
 
@@ -40,6 +44,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
       .toUpperCase()
       .slice(0, 2);
   };
+
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
       <div className="flex items-center justify-between px-6 py-4">
@@ -51,6 +56,19 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
           >
             <Bars3Icon className="w-6 h-6 text-gray-600" />
+          </button>
+
+          {/* Desktop Collapse Button */}
+          <button
+            onClick={onCollapseClick}
+            className="hidden lg:flex p-2 rounded-lg hover:bg-gray-100 transition-colors items-center space-x-2"
+            title={isSidebarCollapsed ? 'Expandir sidebar' : 'Contraer sidebar'}
+          >
+            {isSidebarCollapsed ? (
+              <ChevronRightIcon className="w-5 h-5 text-gray-600" />
+            ) : (
+              <ChevronLeftIcon className="w-5 h-5 text-gray-600" />
+            )}
           </button>
 
           {/* Breadcrumb */}

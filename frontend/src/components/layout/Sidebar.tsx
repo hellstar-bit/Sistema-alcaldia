@@ -1,5 +1,5 @@
 // frontend/src/components/layout/Sidebar.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   HomeIcon,
   DocumentArrowUpIcon,
@@ -17,8 +17,8 @@ import {
   CogIcon,
   UserGroupIcon,
   DocumentChartBarIcon,
-  ClockIcon,
-  ServerIcon
+  ServerIcon,
+  Bars3Icon
 } from '@heroicons/react/24/outline';
 
 interface MenuItem {
@@ -33,6 +33,8 @@ interface MenuItem {
 interface SidebarProps {
   isOpen: boolean;
   onToggle: () => void;
+  isCollapsed: boolean;
+  onCollapseToggle: () => void;
 }
 
 const menuItems: MenuItem[] = [
@@ -138,7 +140,6 @@ const menuItems: MenuItem[] = [
       }
     ]
   },
-  // NUEVOS ITEMS PARA LLENAR ESPACIO
   {
     id: 'reportes',
     label: 'Reportes y Análisis',
@@ -184,68 +185,98 @@ const MenuItemComponent: React.FC<{
   level: number;
   currentPath: string;
   onItemClick: (item: MenuItem) => void;
-}> = ({ item, level, currentPath, onItemClick }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+  isCollapsed: boolean;
+  expandedItems: Set<string>;
+  setExpandedItems: React.Dispatch<React.SetStateAction<Set<string>>>;
+}> = ({ item, level, currentPath, onItemClick, isCollapsed, expandedItems, setExpandedItems }) => {
   const hasChildren = item.children && item.children.length > 0;
   const isActive = currentPath === item.href;
+  const isExpanded = expandedItems.has(item.id);
   const isParentActive = item.children?.some(child => 
     child.href === currentPath || 
     child.children?.some(grandChild => grandChild.href === currentPath)
   );
 
   const handleClick = () => {
-    if (hasChildren) {
-      setIsExpanded(!isExpanded);
-    } else {
+    if (hasChildren && !isCollapsed) {
+      const newExpanded = new Set(expandedItems);
+      if (isExpanded) {
+        newExpanded.delete(item.id);
+      } else {
+        newExpanded.add(item.id);
+      }
+      setExpandedItems(newExpanded);
+    } else if (!hasChildren) {
       onItemClick(item);
     }
   };
 
-  const paddingLeft = level === 0 ? 'pl-4' : level === 1 ? 'pl-8' : 'pl-12';
+  const paddingLeft = isCollapsed ? 'px-3' : 
+    level === 0 ? 'pl-4 pr-3' : 
+    level === 1 ? 'pl-8 pr-3' : 'pl-12 pr-3';
+  
   const textSize = level === 0 ? 'text-sm' : 'text-xs';
+
+  // Tooltip para cuando está colapsado
+  const showTooltip = isCollapsed && level === 0;
 
   return (
     <>
-      <button
-        onClick={handleClick}
-        className={`
-          w-full flex items-center justify-between px-3 py-3 rounded-lg text-left transition-all duration-200 group
-          ${paddingLeft} ${textSize}
-          ${isActive 
-            ? 'bg-primary-900 text-white shadow-md' 
-            : isParentActive 
-              ? 'bg-primary-50 text-primary-900 border border-primary-200' 
-              : 'text-gray-700 hover:bg-gray-100 hover:text-primary-900'
-          }
-        `}
-      >
-        <div className="flex items-center space-x-3 min-w-0 flex-1">
-          <item.icon 
-            className={`
-              flex-shrink-0 w-4 h-4 sm:w-5 sm:h-5 transition-colors duration-200
-              ${isActive ? 'text-white' : isParentActive ? 'text-primary-900' : 'text-gray-500 group-hover:text-primary-900'}
-            `}
-          />
-          <span className="font-medium truncate">{item.label}</span>
-          {item.badge && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success-100 text-success-800">
-              {item.badge}
-            </span>
-          )}
-        </div>
-        
-        {hasChildren && (
-          <div className="flex-shrink-0 ml-2">
-            {isExpanded ? (
-              <ChevronDownIcon className="w-4 h-4 text-gray-400" />
-            ) : (
-              <ChevronRightIcon className="w-4 h-4 text-gray-400" />
+      <div className="relative group">
+        <button
+          onClick={handleClick}
+          className={`
+            w-full flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} 
+            py-3 rounded-lg text-left transition-all duration-200 group/btn
+            ${paddingLeft} ${textSize}
+            ${isActive 
+              ? 'bg-primary-900 text-white shadow-md' 
+              : isParentActive 
+                ? 'bg-primary-50 text-primary-900 border border-primary-200' 
+                : 'text-gray-700 hover:bg-gray-100 hover:text-primary-900'
+            }
+          `}
+        >
+          <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'} min-w-0 flex-1`}>
+            <item.icon 
+              className={`
+                flex-shrink-0 w-5 h-5 transition-colors duration-200
+                ${isActive ? 'text-white' : isParentActive ? 'text-primary-900' : 'text-gray-500 group-hover/btn:text-primary-900'}
+              `}
+            />
+            {!isCollapsed && (
+              <>
+                <span className="font-medium truncate">{item.label}</span>
+                {item.badge && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success-100 text-success-800">
+                    {item.badge}
+                  </span>
+                )}
+              </>
             )}
           </div>
-        )}
-      </button>
+          
+          {hasChildren && !isCollapsed && (
+            <div className="flex-shrink-0 ml-2">
+              {isExpanded ? (
+                <ChevronDownIcon className="w-4 h-4 text-gray-400" />
+              ) : (
+                <ChevronRightIcon className="w-4 h-4 text-gray-400" />
+              )}
+            </div>
+          )}
+        </button>
 
-      {hasChildren && isExpanded && (
+        {/* Tooltip para modo colapsado */}
+        {showTooltip && (
+          <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 whitespace-nowrap">
+            {item.label}
+            <div className="absolute top-1/2 left-0 transform -translate-y-1/2 -translate-x-1 w-2 h-2 bg-gray-900 rotate-45"></div>
+          </div>
+        )}
+      </div>
+
+      {hasChildren && isExpanded && !isCollapsed && (
         <div className="mt-1 space-y-1">
           {item.children!.map((child) => (
             <MenuItemComponent
@@ -254,6 +285,9 @@ const MenuItemComponent: React.FC<{
               level={level + 1}
               currentPath={currentPath}
               onItemClick={onItemClick}
+              isCollapsed={isCollapsed}
+              expandedItems={expandedItems}
+              setExpandedItems={setExpandedItems}
             />
           ))}
         </div>
@@ -262,8 +296,32 @@ const MenuItemComponent: React.FC<{
   );
 };
 
-export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, isCollapsed, onCollapseToggle }) => {
   const [currentPath, setCurrentPath] = useState('/dashboard');
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+
+  // Auto-expandir elementos activos
+  useEffect(() => {
+    const findActiveParents = (items: MenuItem[], path: string, parents: string[] = []): string[] => {
+      for (const item of items) {
+        if (item.href === path) {
+          return parents;
+        }
+        if (item.children) {
+          const found = findActiveParents(item.children, path, [...parents, item.id]);
+          if (found.length > 0) {
+            return found;
+          }
+        }
+      }
+      return [];
+    };
+
+    const activeParents = findActiveParents(menuItems, currentPath);
+    if (activeParents.length > 0) {
+      setExpandedItems(new Set(activeParents));
+    }
+  }, [currentPath]);
 
   const handleItemClick = (item: MenuItem) => {
     if (item.href) {
@@ -285,25 +343,39 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
         />
       )}
 
-      {/* Sidebar Principal - REDISTRIBUCIÓN DE ESPACIO */}
+      {/* Sidebar Principal */}
       <div className={`
-        fixed top-0 left-0 h-full bg-white shadow-xl z-30 transition-transform duration-300 ease-in-out
+        fixed top-0 left-0 h-full bg-white shadow-xl z-30 transition-all duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-        w-80 lg:translate-x-0 lg:static lg:z-auto
+        ${isCollapsed ? 'w-16' : 'w-80'}
+        lg:translate-x-0 lg:static lg:z-auto
         flex flex-col
       `}>
-        {/* Header del Sidebar - MAS COMPACTO */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-primary-900 to-primary-800 text-white flex-shrink-0">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
-              <span className="text-primary-900 font-bold text-sm">A</span>
+        {/* Header del Sidebar */}
+        <div className={`flex items-center ${isCollapsed ? 'justify-center px-2' : 'justify-between px-4'} py-4 border-b border-gray-200 bg-gradient-to-r from-primary-900 to-primary-800 text-white flex-shrink-0`}>
+          {!isCollapsed && (
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
+                <span className="text-primary-900 font-bold text-sm">A</span>
+              </div>
+              <div>
+                <h2 className="text-base font-bold">SGP</h2>
+                <p className="text-xs text-primary-200">Sistema de Gestión</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-base font-bold">SGP</h2>
-              <p className="text-xs text-primary-200">Sistema de Gestión</p>
-            </div>
-          </div>
+          )}
           
+          {/* Cuando está colapsado, no mostramos ningún icono, solo el espacio vacío */}
+          
+          {/* Botón de colapsar para desktop */}
+          <button
+            onClick={onCollapseToggle}
+            className="hidden lg:block p-2 rounded-lg hover:bg-primary-800 transition-colors"
+          >
+            <Bars3Icon className="w-4 h-4" />
+          </button>
+
+          {/* Botón de cerrar para mobile */}
           <button
             onClick={onToggle}
             className="lg:hidden p-2 rounded-lg hover:bg-primary-800 transition-colors"
@@ -312,9 +384,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
           </button>
         </div>
 
-        {/* Navegación - EXPANDIDA PARA LLENAR ESPACIO */}
+        {/* Navegación */}
         <nav className="flex-1 overflow-y-auto py-4">
-          <div className="space-y-2 px-4">
+          <div className={`space-y-2 ${isCollapsed ? 'px-2' : 'px-4'}`}>
             {menuItems.map((item) => (
               <MenuItemComponent
                 key={item.id}
@@ -322,87 +394,95 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
                 level={0}
                 currentPath={currentPath}
                 onItemClick={handleItemClick}
+                isCollapsed={isCollapsed}
+                expandedItems={expandedItems}
+                setExpandedItems={setExpandedItems}
               />
             ))}
           </div>
         </nav>
 
-        {/* Información del Usuario - SECCIÓN MEDIA */}
-        <div className="px-4 py-3 border-t border-gray-200 flex-shrink-0">
-          <div className="bg-gradient-to-br from-primary-50 to-primary-100 rounded-lg p-3 border border-primary-200">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-primary-900 rounded-full flex items-center justify-center">
-                <span className="text-white text-xs font-medium">AS</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-primary-900 truncate">Admin Sistema</p>
-                <p className="text-xs text-primary-700">Administrador</p>
+        {/* Secciones inferiores - Solo visible cuando no está colapsado */}
+        {!isCollapsed && (
+          <>
+            {/* Información del Usuario */}
+            <div className="px-4 py-3 border-t border-gray-200 flex-shrink-0">
+              <div className="bg-gradient-to-br from-primary-50 to-primary-100 rounded-lg p-3 border border-primary-200">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-primary-900 rounded-full flex items-center justify-center">
+                    <span className="text-white text-xs font-medium">AS</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-primary-900 truncate">Admin Sistema</p>
+                    <p className="text-xs text-primary-700">Administrador</p>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* Estadísticas Rápidas - NUEVA SECCIÓN */}
-        <div className="px-4 py-3 border-t border-gray-100 flex-shrink-0">
-          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Estadísticas Rápidas</h4>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-gray-600">EPS Activas</span>
-              <span className="font-medium text-primary-900">24</span>
-            </div>
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-gray-600">IPS Registradas</span>
-              <span className="font-medium text-primary-900">156</span>
-            </div>
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-gray-600">Última Carga</span>
-              <span className="font-medium text-success-600">Hace 2h</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer del Sidebar - MEJORADO */}
-        <div className="px-4 py-3 border-t border-gray-200 flex-shrink-0">
-          <div className="bg-gradient-to-br from-success-50 to-success-100 rounded-lg p-3 border border-success-200">
-            <div className="flex items-center space-x-2 text-xs">
-              <div className="w-2 h-2 bg-success-500 rounded-full animate-pulse"></div>
-              <span className="text-success-800 font-medium">Sistema Online</span>
-            </div>
-            <div className="mt-2 space-y-1 text-xs text-success-700">
-              <div className="flex items-center justify-between">
-                <span>Base de Datos</span>
-                <span className="font-medium">✓ OK</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Última Sync</span>
-                <span className="font-medium">{new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</span>
+            {/* Estadísticas Rápidas */}
+            <div className="px-4 py-3 border-t border-gray-100 flex-shrink-0">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Estadísticas Rápidas</h4>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-gray-600">EPS Activas</span>
+                  <span className="font-medium text-primary-900">24</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-gray-600">IPS Registradas</span>
+                  <span className="font-medium text-primary-900">156</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-gray-600">Última Carga</span>
+                  <span className="font-medium text-success-600">Hace 2h</span>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* Accesos Rápidos - NUEVA SECCIÓN FINAL */}
-        <div className="px-4 py-3 border-t border-gray-100 flex-shrink-0">
-          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Accesos Rápidos</h4>
-          <div className="grid grid-cols-2 gap-2">
-            <button className="flex flex-col items-center p-2 rounded-lg hover:bg-gray-50 transition-colors">
-              <DocumentArrowUpIcon className="w-4 h-4 text-primary-600 mb-1" />
-              <span className="text-xs text-gray-600">Cargar</span>
-            </button>
-            <button className="flex flex-col items-center p-2 rounded-lg hover:bg-gray-50 transition-colors">
-              <ChartBarIcon className="w-4 h-4 text-primary-600 mb-1" />
-              <span className="text-xs text-gray-600">Reportes</span>
-            </button>
-            <button className="flex flex-col items-center p-2 rounded-lg hover:bg-gray-50 transition-colors">
-              <CogIcon className="w-4 h-4 text-primary-600 mb-1" />
-              <span className="text-xs text-gray-600">Config</span>
-            </button>
-            <button className="flex flex-col items-center p-2 rounded-lg hover:bg-gray-50 transition-colors">
-              <ServerIcon className="w-4 h-4 text-primary-600 mb-1" />
-              <span className="text-xs text-gray-600">Sistema</span>
-            </button>
-          </div>
-        </div>
+            {/* Footer del Sidebar */}
+            <div className="px-4 py-3 border-t border-gray-200 flex-shrink-0">
+              <div className="bg-gradient-to-br from-success-50 to-success-100 rounded-lg p-3 border border-success-200">
+                <div className="flex items-center space-x-2 text-xs">
+                  <div className="w-2 h-2 bg-success-500 rounded-full animate-pulse"></div>
+                  <span className="text-success-800 font-medium">Sistema Online</span>
+                </div>
+                <div className="mt-2 space-y-1 text-xs text-success-700">
+                  <div className="flex items-center justify-between">
+                    <span>Base de Datos</span>
+                    <span className="font-medium">✓ OK</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Última Sync</span>
+                    <span className="font-medium">{new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Accesos Rápidos */}
+            <div className="px-4 py-3 border-t border-gray-100 flex-shrink-0">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Accesos Rápidos</h4>
+              <div className="grid grid-cols-2 gap-2">
+                <button className="flex flex-col items-center p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                  <DocumentArrowUpIcon className="w-4 h-4 text-primary-600 mb-1" />
+                  <span className="text-xs text-gray-600">Cargar</span>
+                </button>
+                <button className="flex flex-col items-center p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                  <ChartBarIcon className="w-4 h-4 text-primary-600 mb-1" />
+                  <span className="text-xs text-gray-600">Reportes</span>
+                </button>
+                <button className="flex flex-col items-center p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                  <CogIcon className="w-4 h-4 text-primary-600 mb-1" />
+                  <span className="text-xs text-gray-600">Config</span>
+                </button>
+                <button className="flex flex-col items-center p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                  <ServerIcon className="w-4 h-4 text-primary-600 mb-1" />
+                  <span className="text-xs text-gray-600">Sistema</span>
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </>
   );
