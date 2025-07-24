@@ -7,12 +7,39 @@ import {
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon
 } from '@heroicons/react/24/outline';
+import { useAuth } from '../../contexts/AuthContext';
+import { useSweetAlert } from '../../hooks/useSweetAlert';
 
 interface HeaderProps {
   onMenuClick: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
+  const { user, logout } = useAuth();
+  const { showConfirm } = useSweetAlert();
+
+  const handleLogout = async () => {
+    const result = await showConfirm({
+      title: '¿Cerrar Sesión?',
+      text: '¿Estás seguro que deseas salir del sistema?',
+      icon: 'question',
+      confirmButtonText: 'Sí, cerrar sesión',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+      logout();
+    }
+  };
+
+  const getInitials = (name: string): string => {
+    return name
+      .split(' ')
+      .map(word => word.charAt(0))
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
       <div className="flex items-center justify-between px-6 py-4">
@@ -47,15 +74,17 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
           {/* User Menu */}
           <div className="flex items-center space-x-3">
             <div className="hidden md:block text-right">
-              <p className="text-sm font-medium text-gray-900">Admin Usuario</p>
-              <p className="text-xs text-gray-500">Administrador</p>
+              <p className="text-sm font-medium text-gray-900">{user?.name}</p>
+              <p className="text-xs text-gray-500">{user?.role}</p>
             </div>
             
             {/* User Avatar with Dropdown */}
             <div className="relative group">
               <button className="flex items-center space-x-2 p-1 rounded-lg hover:bg-gray-100 transition-colors">
                 <div className="w-8 h-8 bg-primary-900 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">AU</span>
+                  <span className="text-white text-sm font-medium">
+                    {user ? getInitials(user.name) : 'U'}
+                  </span>
                 </div>
               </button>
 
@@ -71,10 +100,13 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                     Configuración
                   </a>
                   <hr className="my-2" />
-                  <a href="#" className="flex items-center px-4 py-2 text-sm text-danger-600 hover:bg-danger-50">
+                  <button 
+                    onClick={handleLogout}
+                    className="w-full flex items-center px-4 py-2 text-sm text-danger-600 hover:bg-danger-50"
+                  >
                     <ArrowRightOnRectangleIcon className="w-4 h-4 mr-3" />
                     Cerrar Sesión
-                  </a>
+                  </button>
                 </div>
               </div>
             </div>

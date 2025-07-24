@@ -179,7 +179,7 @@ const MenuItemComponent: React.FC<{
         <div className="flex items-center space-x-3 min-w-0 flex-1">
           <item.icon 
             className={`
-              flex-shrink-0 w-5 h-5 transition-colors duration-200
+              flex-shrink-0 w-4 h-4 sm:w-5 sm:h-5 transition-colors duration-200
               ${isActive ? 'text-white' : isParentActive ? 'text-primary-900' : 'text-gray-500 group-hover:text-primary-900'}
             `}
           />
@@ -220,12 +220,11 @@ const MenuItemComponent: React.FC<{
 };
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
-  const [currentPath, setCurrentPath] = useState('/carga/cartera'); // Simular ruta actual
+  const [currentPath, setCurrentPath] = useState('/carga/cartera');
 
   const handleItemClick = (item: MenuItem) => {
     if (item.href) {
       setCurrentPath(item.href);
-      // Aquí iría la navegación real: navigate(item.href)
       console.log('Navigating to:', item.href);
     }
   };
@@ -240,20 +239,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar - ANCHO RESPONSIVO */}
       <div className={`
         fixed top-0 left-0 h-full bg-white shadow-xl z-30 transition-transform duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-        w-80 lg:translate-x-0 lg:static lg:z-auto
+        w-72 sm:w-80 lg:translate-x-0 lg:static lg:z-auto
       `}>
         {/* Header del Sidebar */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-primary-900 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">A</span>
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary-900 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm sm:text-lg">A</span>
             </div>
             <div>
-              <h2 className="text-lg font-bold text-primary-900">SGP</h2>
+              <h2 className="text-base sm:text-lg font-bold text-primary-900">SGP</h2>
               <p className="text-xs text-gray-500">Sistema de Gestión</p>
             </div>
           </div>

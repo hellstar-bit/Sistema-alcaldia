@@ -19,14 +19,16 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* Sidebar */}
       <Sidebar isOpen={sidebarOpen} onToggle={toggleSidebar} />
       
-      {/* Main Content */}
+      {/* Main Content - CORRECCIÓN CRÍTICA AQUÍ */}
       <div className="lg:ml-80 flex flex-col min-h-screen">
         {/* Header */}
         <Header onMenuClick={toggleSidebar} />
         
-        {/* Page Content */}
-        <main className="flex-1 p-6">
-          {children}
+        {/* Page Content - CONTENEDOR RESPONSIVO MEJORADO */}
+        <main className="flex-1 w-full overflow-x-hidden">
+          <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            {children}
+          </div>
         </main>
       </div>
     </div>
