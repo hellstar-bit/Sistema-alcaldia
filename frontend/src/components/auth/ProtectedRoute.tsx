@@ -14,8 +14,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const { isAuthenticated, isLoading } = useAuth();
 
+  console.log('🛡️ ProtectedRoute: Estado:', { isAuthenticated, isLoading });
+
   // Mostrar spinner mientras se verifica la autenticación
   if (isLoading) {
+    console.log('⏳ ProtectedRoute: Mostrando loading...');
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary-900 via-primary-800 to-primary-700 flex items-center justify-center">
         <div className="text-center">
@@ -29,9 +32,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Si no está autenticado, mostrar login o fallback
   if (!isAuthenticated) {
-    return fallback || <Login onLoginSuccess={() => {}} />;
+    console.log('🔓 ProtectedRoute: Usuario no autenticado, mostrando Login...');
+    return fallback || <Login />;
   }
 
   // Si está autenticado, mostrar el contenido protegido
+  console.log('✅ ProtectedRoute: Usuario autenticado, mostrando contenido protegido...');
   return <>{children}</>;
 };

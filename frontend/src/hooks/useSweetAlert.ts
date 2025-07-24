@@ -24,7 +24,7 @@ export const useSweetAlert = () => {
     reverseButtons: true,
   };
 
-  const showSuccess = (options: AlertOptions) => {
+  const showSuccess = (p0: string, options: AlertOptions) => {
     return Swal.fire({
       ...baseConfig,
       icon: 'success',
@@ -80,7 +80,7 @@ export const useSweetAlert = () => {
     });
   };
 
-  const showLoading = (title: string = 'Procesando...') => {
+  const showLoading = (title: string = 'Procesando...', p0: string) => {
     return Swal.fire({
       ...baseConfig,
       title,

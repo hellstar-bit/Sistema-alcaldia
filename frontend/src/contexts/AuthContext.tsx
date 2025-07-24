@@ -5,16 +5,23 @@ interface User {
   id: string;
   email: string;
   name: string;
+  firstName: string;
+  lastName: string;
   role: string;
   avatar?: string;
   lastLogin?: Date;
+}
+
+interface LoginRequest {
+  email: string;
+  password: string;
 }
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (credentials: LoginRequest) => Promise<void>;
   logout: () => void;
   updateUser: (userData: Partial<User>) => void;
 }
@@ -30,43 +37,56 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Verificar si hay una sesión guardada al cargar la app
-    const checkStoredSession = () => {
-      const storedUser = localStorage.getItem('user');
-      const storedToken = localStorage.getItem('token');
-      
-      if (storedUser && storedToken) {
-        try {
-          const userData = JSON.parse(storedUser);
-          setUser(userData);
-        } catch (error) {
-          console.error('Error parsing stored user data:', error);
-          localStorage.removeItem('user');
-          localStorage.removeItem('token');
-        }
-      }
-      setIsLoading(false);
-    };
-
+    console.log('🔄 AuthProvider: Iniciando verificación de sesión...');
     checkStoredSession();
   }, []);
 
-  const login = async (email: string, password: string): Promise<void> => {
+  const checkStoredSession = () => {
+    console.log('🔍 AuthProvider: Verificando sesión almacenada...');
+    
+    const storedUser = localStorage.getItem('user');
+    const storedToken = localStorage.getItem('token');
+    
+    if (storedUser && storedToken) {
+      try {
+        const userData = JSON.parse(storedUser);
+        console.log('✅ AuthProvider: Sesión encontrada:', userData);
+        setUser(userData);
+      } catch (error) {
+        console.error('❌ AuthProvider: Error parsing stored user data:', error);
+        clearStoredSession();
+      }
+    } else {
+      console.log('ℹ️ AuthProvider: No hay sesión almacenada');
+    }
+    
+    setIsLoading(false);
+    console.log('✅ AuthProvider: Verificación completada, isLoading = false');
+  };
+
+  const clearStoredSession = () => {
+    console.log('🧹 AuthProvider: Limpiando sesión...');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+  };
+
+  const login = async (credentials: LoginRequest): Promise<void> => {
+    console.log('🔐 AuthProvider: Intentando login con:', credentials.email);
     setIsLoading(true);
     
     try {
-      // Aquí iría la llamada real a la API
-      // const response = await authAPI.login(email, password);
-      
-      // Simulación de login
+      // Simulación de llamada a API
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      if (email === 'admin@barranquilla.gov.co' && password === 'admin123') {
+      if (credentials.email === 'admin@barranquilla.gov.co' && credentials.password === 'admin123') {
         const userData: User = {
           id: '1',
-          email: email,
+          email: credentials.email,
           name: 'Administrador Sistema',
-          role: 'Administrador',
+          firstName: 'Administrador',
+          lastName: 'Sistema',
+          role: 'ADMIN',
           avatar: '',
           lastLogin: new Date()
         };
@@ -78,10 +98,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         localStorage.setItem('token', token);
         
         setUser(userData);
+        console.log('✅ AuthProvider: Login exitoso:', userData);
       } else {
         throw new Error('Credenciales inválidas');
       }
     } catch (error) {
+      console.error('❌ AuthProvider: Error en login:', error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -89,12 +111,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = () => {
-    setUser(null);
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
-    
-    // Limpiar cualquier otro dato de sesión
-    sessionStorage.clear();
+    console.log('🚪 AuthProvider: Cerrando sesión...');
+    clearStoredSession();
   };
 
   const updateUser = (userData: Partial<User>) => {
@@ -102,6 +120,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const updatedUser = { ...user, ...userData };
       setUser(updatedUser);
       localStorage.setItem('user', JSON.stringify(updatedUser));
+      console.log('📝 AuthProvider: Usuario actualizado:', updatedUser);
     }
   };
 
@@ -113,6 +132,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logout,
     updateUser
   };
+
+  console.log('🔄 AuthProvider: Estado actual:', {
+    isAuthenticated: !!user,
+    isLoading,
+    userName: user?.name || 'No user'
+  });
 
   return (
     <AuthContext.Provider value={value}>

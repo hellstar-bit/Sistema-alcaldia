@@ -5,12 +5,13 @@ import {
   DocumentArrowUpIcon,
   CurrencyDollarIcon,
   UsersIcon,
-  ArrowTrendingUpIcon,
   ExclamationTriangleIcon,
   CalendarDaysIcon,
   DocumentTextIcon,
   BanknotesIcon,
-  ClockIcon
+  ClockIcon,
+  SparklesIcon,
+  ArrowTrendingUpIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -35,19 +36,25 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, change, changeType, i
     neutral: '➡️'
   }[changeType];
 
+  const changeBg = {
+    positive: 'bg-success-50',
+    negative: 'bg-danger-50',
+    neutral: 'bg-gray-50'
+  }[changeType];
+
   return (
-    <div className="card p-4 sm:p-6 hover:shadow-card-hover transition-shadow duration-200">
+    <div className="card p-4 sm:p-6 hover:shadow-elegant transition-all duration-300 border-l-4 border-primary-500">
       <div className="flex items-center justify-between min-w-0">
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-gray-600 mb-1 truncate">{title}</p>
-          <p className="text-xl sm:text-2xl font-bold text-primary-900 truncate">{value}</p>
-          <p className={`text-xs sm:text-sm ${changeColor} flex items-center mt-1`}>
+          <p className="text-sm font-medium text-gray-600 mb-2 truncate">{title}</p>
+          <p className="text-2xl sm:text-3xl font-bold text-primary-900 truncate mb-2">{value}</p>
+          <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${changeBg} ${changeColor}`}>
             <span className="mr-1">{changeIcon}</span>
-            <span className="truncate">{change}</span>
-          </p>
+            <span className="truncate font-medium">{change}</span>
+          </div>
         </div>
-        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-primary-100 rounded-lg flex items-center justify-center flex-shrink-0 ml-3">
-          <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-primary-600" />
+        <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-primary-100 to-primary-200 rounded-xl flex items-center justify-center flex-shrink-0 ml-3 shadow-sm">
+          <Icon className="w-6 h-6 sm:w-7 sm:h-7 text-primary-700" />
         </div>
       </div>
     </div>
@@ -64,22 +71,31 @@ interface QuickActionProps {
 
 const QuickAction: React.FC<QuickActionProps> = ({ title, description, icon: Icon, href, color }) => {
   const colorClasses = {
-    primary: 'bg-primary-50 text-primary-700 border-primary-200 hover:bg-primary-100',
-    secondary: 'bg-secondary-50 text-secondary-700 border-secondary-200 hover:bg-secondary-100',
-    success: 'bg-success-50 text-success-700 border-success-200 hover:bg-success-100',
-    warning: 'bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100'
+    primary: 'bg-gradient-to-br from-primary-50 to-primary-100 text-primary-800 border-primary-200 hover:from-primary-100 hover:to-primary-200 hover:shadow-md',
+    secondary: 'bg-gradient-to-br from-blue-50 to-blue-100 text-blue-800 border-blue-200 hover:from-blue-100 hover:to-blue-200 hover:shadow-md',
+    success: 'bg-gradient-to-br from-success-50 to-success-100 text-success-800 border-success-200 hover:from-success-100 hover:to-success-200 hover:shadow-md',
+    warning: 'bg-gradient-to-br from-yellow-50 to-yellow-100 text-yellow-800 border-yellow-200 hover:from-yellow-100 hover:to-yellow-200 hover:shadow-md'
+  }[color];
+
+  const iconColor = {
+    primary: 'text-primary-600',
+    secondary: 'text-blue-600',
+    success: 'text-success-600',
+    warning: 'text-yellow-600'
   }[color];
 
   return (
     <a 
       href={href}
-      className={`block p-3 sm:p-4 rounded-lg border-2 transition-colors duration-200 ${colorClasses}`}
+      className={`block p-4 rounded-xl border-2 transition-all duration-300 transform hover:scale-105 ${colorClasses}`}
     >
       <div className="flex items-start space-x-3">
-        <Icon className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0 mt-1" />
-        <div className="min-w-0">
-          <h3 className="font-medium text-xs sm:text-sm truncate">{title}</h3>
-          <p className="text-xs opacity-75 mt-1 line-clamp-2">{description}</p>
+        <div className="w-10 h-10 rounded-lg bg-white bg-opacity-70 flex items-center justify-center flex-shrink-0">
+          <Icon className={`w-5 h-5 ${iconColor}`} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h3 className="font-semibold text-sm truncate mb-1">{title}</h3>
+          <p className="text-xs opacity-80 line-clamp-2">{description}</p>
         </div>
       </div>
     </a>
@@ -101,7 +117,7 @@ const RecentActivity: React.FC<{ activities: RecentActivityItem[] }> = ({ activi
       case 'upload':
         return <DocumentArrowUpIcon className="w-4 h-4 sm:w-5 sm:h-5 text-primary-600" />;
       case 'process':
-        return <ClockIcon className="w-4 h-4 sm:w-5 sm:h-5 text-secondary-600" />;
+        return <ClockIcon className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />;
       case 'alert':
         return <ExclamationTriangleIcon className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600" />;
       case 'export':
@@ -114,32 +130,32 @@ const RecentActivity: React.FC<{ activities: RecentActivityItem[] }> = ({ activi
   const getActivityColor = (type: string) => {
     switch (type) {
       case 'upload':
-        return 'bg-primary-50';
+        return 'bg-gradient-to-r from-primary-50 to-primary-100';
       case 'process':
-        return 'bg-secondary-50';
+        return 'bg-gradient-to-r from-blue-50 to-blue-100';
       case 'alert':
-        return 'bg-yellow-50';
+        return 'bg-gradient-to-r from-yellow-50 to-yellow-100';
       case 'export':
-        return 'bg-success-50';
+        return 'bg-gradient-to-r from-success-50 to-success-100';
       default:
-        return 'bg-gray-50';
+        return 'bg-gradient-to-r from-gray-50 to-gray-100';
     }
   };
 
   return (
-    <div className="space-y-2 sm:space-y-3">
+    <div className="space-y-3">
       {activities.map((activity) => (
-        <div key={activity.id} className="flex items-start space-x-3 p-2 sm:p-3 rounded-lg hover:bg-gray-50 transition-colors duration-150">
-          <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center ${getActivityColor(activity.type)} flex-shrink-0`}>
+        <div key={activity.id} className="flex items-start space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-all duration-200 border border-transparent hover:border-gray-200">
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${getActivityColor(activity.type)} flex-shrink-0 shadow-sm`}>
             {getActivityIcon(activity.type)}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">{activity.title}</p>
-            <p className="text-xs text-gray-500 truncate">{activity.description}</p>
-            <div className="flex items-center space-x-2 mt-1">
-              <span className="text-xs text-gray-400 truncate">{activity.user}</span>
+            <p className="text-sm font-semibold text-gray-900 truncate">{activity.title}</p>
+            <p className="text-xs text-gray-600 truncate mt-1">{activity.description}</p>
+            <div className="flex items-center space-x-2 mt-2">
+              <span className="text-xs text-gray-500 truncate">{activity.user}</span>
               <span className="text-xs text-gray-300">•</span>
-              <span className="text-xs text-gray-400 truncate">{activity.timestamp}</span>
+              <span className="text-xs text-gray-500 truncate">{activity.timestamp}</span>
             </div>
           </div>
         </div>
@@ -265,46 +281,63 @@ export const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Header de Bienvenida - RESPONSIVO */}
-      <div className="bg-gradient-to-r from-primary-900 to-primary-800 rounded-xl p-4 sm:p-6 text-white">
-        <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      {/* Header de Bienvenida Elegante */}
+      <div className="bg-gradient-to-r from-primary-900 via-primary-800 to-primary-700 rounded-2xl p-6 sm:p-8 text-white shadow-elegant relative overflow-hidden">
+        {/* Pattern Background */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute inset-0" style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+          }} />
+        </div>
+        
+        <div className="relative flex items-center justify-between">
           <div className="min-w-0 flex-1">
-            <h1 className="text-lg sm:text-xl lg:text-2xl font-bold mb-2">
-              {formatGreeting()}, {user?.name?.split(' ')[0] || 'Usuario'}! 👋
-            </h1>
-            <p className="text-primary-200 text-sm sm:text-base">
+            <div className="flex items-center space-x-2 mb-3">
+              <SparklesIcon className="w-6 h-6 text-yellow-300" />
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">
+                {formatGreeting()}, {user?.name?.split(' ')[0] || 'Usuario'}!
+              </h1>
+            </div>
+            <p className="text-primary-100 text-sm sm:text-base mb-2">
               Bienvenido al Sistema de Gestión Presupuestal - Alcaldía de Barranquilla
             </p>
-            <p className="text-primary-300 text-xs sm:text-sm mt-1">
-              Última conexión: {new Date().toLocaleDateString('es-CO', { 
-                weekday: 'short', 
+            <div className="flex items-center space-x-4 text-xs sm:text-sm text-primary-200">
+              <span>📅 {new Date().toLocaleDateString('es-CO', { 
+                weekday: 'long', 
                 year: 'numeric', 
-                month: 'short', 
+                month: 'long', 
                 day: 'numeric' 
-              })}
-            </p>
+              })}</span>
+              <span>🕐 {new Date().toLocaleTimeString('es-CO', { 
+                hour: '2-digit', 
+                minute: '2-digit'
+              })}</span>
+            </div>
           </div>
-          <div className="hidden sm:block flex-shrink-0 ml-4">
-            <div className="w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-              <ChartBarIcon className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 text-white" />
+          <div className="hidden sm:block flex-shrink-0 ml-6">
+            <div className="w-16 h-16 lg:w-20 lg:h-20 bg-white bg-opacity-20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+              <ChartBarIcon className="w-8 h-8 lg:w-10 lg:h-10 text-white" />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Filtros de período - RESPONSIVO */}
+      {/* Filtros y Título */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-lg sm:text-xl font-semibold text-primary-900">Resumen General</h2>
-          <p className="text-gray-600 text-sm">Métricas principales del sistema</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-primary-900 flex items-center space-x-2">
+            <ArrowTrendingUpIcon className="w-6 h-6 text-primary-600" />
+            <span>Resumen General</span>
+          </h2>
+          <p className="text-gray-600 text-sm mt-1">Métricas principales del sistema en tiempo real</p>
         </div>
-        <div className="flex items-center space-x-2">
-          <CalendarDaysIcon className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+        <div className="flex items-center space-x-3 bg-white p-3 rounded-xl shadow-sm border border-gray-200">
+          <CalendarDaysIcon className="w-5 h-5 text-primary-600" />
           <select 
             value={selectedPeriod}
             onChange={(e) => setSelectedPeriod(e.target.value)}
-            className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className="bg-transparent border-none focus:outline-none focus:ring-0 text-sm font-medium text-primary-900"
           >
             <option value="week">Esta semana</option>
             <option value="month">Este mes</option>
@@ -314,22 +347,25 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Tarjetas de Estadísticas - GRID RESPONSIVO */}
-      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Tarjetas de Estadísticas */}
+      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat, index) => (
           <StatCard key={index} {...stat} />
         ))}
       </div>
 
-      {/* Acciones Rápidas y Actividad Reciente - RESPONSIVO */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+      {/* Acciones Rápidas y Actividad Reciente */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Acciones Rápidas */}
-        <div className="lg:col-span-1">
-          <div className="card p-4 sm:p-6">
-            <h3 className="text-base sm:text-lg font-semibold text-primary-900 mb-4">
-              ⚡ Acciones Rápidas
-            </h3>
-            <div className="grid grid-cols-1 gap-3">
+        <div className="xl:col-span-1">
+          <div className="card p-6">
+            <div className="flex items-center space-x-2 mb-6">
+              <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
+                <SparklesIcon className="w-4 h-4 text-white" />
+              </div>
+              <h3 className="text-lg font-bold text-primary-900">Acciones Rápidas</h3>
+            </div>
+            <div className="space-y-4">
               {quickActions.map((action, index) => (
                 <QuickAction key={index} {...action} />
               ))}
@@ -338,15 +374,18 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Actividad Reciente */}
-        <div className="lg:col-span-2">
-          <div className="card p-4 sm:p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base sm:text-lg font-semibold text-primary-900">
-                📈 Actividad Reciente
-              </h3>
+        <div className="xl:col-span-2">
+          <div className="card p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                  <ClockIcon className="w-4 h-4 text-white" />
+                </div>
+                <h3 className="text-lg font-bold text-primary-900">Actividad Reciente</h3>
+              </div>
               <a 
                 href="/activity" 
-                className="text-sm text-primary-600 hover:text-primary-800 font-medium"
+                className="text-sm text-primary-600 hover:text-primary-800 font-semibold transition-colors"
               >
                 Ver todas →
               </a>
@@ -356,31 +395,34 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Estado del Sistema - RESPONSIVO */}
-      <div className="card p-4 sm:p-6">
-        <h3 className="text-base sm:text-lg font-semibold text-primary-900 mb-4">
-          🖥️ Estado del Sistema
-        </h3>
-        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-          <div className="flex items-center space-x-3 p-3 bg-success-50 rounded-lg">
+      {/* Estado del Sistema */}
+      <div className="card p-6">
+        <div className="flex items-center space-x-2 mb-6">
+          <div className="w-8 h-8 bg-gradient-to-br from-success-500 to-success-600 rounded-lg flex items-center justify-center">
+            <ChartBarIcon className="w-4 h-4 text-white" />
+          </div>
+          <h3 className="text-lg font-bold text-primary-900">Estado del Sistema</h3>
+        </div>
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="flex items-center space-x-3 p-4 bg-gradient-to-r from-success-50 to-success-100 rounded-xl border border-success-200">
             <div className="w-3 h-3 bg-success-500 rounded-full animate-pulse flex-shrink-0"></div>
             <div className="min-w-0">
-              <p className="text-sm font-medium text-success-800">Base de Datos</p>
-              <p className="text-xs text-success-600">Conectada y funcionando</p>
+              <p className="text-sm font-semibold text-success-900">Base de Datos</p>
+              <p className="text-xs text-success-700">Conectada y funcionando</p>
             </div>
           </div>
-          <div className="flex items-center space-x-3 p-3 bg-success-50 rounded-lg">
+          <div className="flex items-center space-x-3 p-4 bg-gradient-to-r from-success-50 to-success-100 rounded-xl border border-success-200">
             <div className="w-3 h-3 bg-success-500 rounded-full animate-pulse flex-shrink-0"></div>
             <div className="min-w-0">
-              <p className="text-sm font-medium text-success-800">API Backend</p>
-              <p className="text-xs text-success-600">Respondiendo correctamente</p>
+              <p className="text-sm font-semibold text-success-900">API Backend</p>
+              <p className="text-xs text-success-700">Respondiendo correctamente</p>
             </div>
           </div>
-          <div className="flex items-center space-x-3 p-3 bg-success-50 rounded-lg">
+          <div className="flex items-center space-x-3 p-4 bg-gradient-to-r from-success-50 to-success-100 rounded-xl border border-success-200">
             <div className="w-3 h-3 bg-success-500 rounded-full animate-pulse flex-shrink-0"></div>
             <div className="min-w-0">
-              <p className="text-sm font-medium text-success-800">Almacenamiento</p>
-              <p className="text-xs text-success-600">85% disponible</p>
+              <p className="text-sm font-semibold text-success-900">Almacenamiento</p>
+              <p className="text-xs text-success-700">85% disponible</p>
             </div>
           </div>
         </div>

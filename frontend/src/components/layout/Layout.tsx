@@ -15,22 +15,30 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
       {/* Sidebar */}
       <Sidebar isOpen={sidebarOpen} onToggle={toggleSidebar} />
       
-      {/* Main Content - CORRECCIÓN CRÍTICA AQUÍ */}
-      <div className="lg:ml-80 flex flex-col min-h-screen">
+      {/* Main Content Area */}
+      <div className="flex flex-col flex-1 min-w-0">
         {/* Header */}
         <Header onMenuClick={toggleSidebar} />
         
-        {/* Page Content - CONTENEDOR RESPONSIVO MEJORADO */}
-        <main className="flex-1 w-full overflow-x-hidden">
-          <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Page Content */}
+        <main className="flex-1 overflow-auto bg-gray-50 p-6">
+          <div className="max-w-none">
             {children}
           </div>
         </main>
       </div>
+
+      {/* Mobile Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
+          onClick={toggleSidebar}
+        />
+      )}
     </div>
   );
 };
