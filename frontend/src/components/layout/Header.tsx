@@ -1,0 +1,86 @@
+// frontend/src/components/layout/Header.tsx
+import React from 'react';
+import {
+  Bars3Icon,
+  BellIcon,
+  UserCircleIcon,
+  Cog6ToothIcon,
+  ArrowRightOnRectangleIcon
+} from '@heroicons/react/24/outline';
+
+interface HeaderProps {
+  onMenuClick: () => void;
+}
+
+export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
+  return (
+    <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
+      <div className="flex items-center justify-between px-6 py-4">
+        {/* Left Section */}
+        <div className="flex items-center space-x-4">
+          {/* Mobile Menu Button */}
+          <button
+            onClick={onMenuClick}
+            className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <Bars3Icon className="w-6 h-6 text-gray-600" />
+          </button>
+
+          {/* Breadcrumb */}
+          <nav className="hidden md:flex items-center space-x-2 text-sm">
+            <span className="text-gray-500">Inicio</span>
+            <span className="text-gray-400">/</span>
+            <span className="text-gray-500">Carga de Información</span>
+            <span className="text-gray-400">/</span>
+            <span className="text-primary-900 font-medium">Información Cartera</span>
+          </nav>
+        </div>
+
+        {/* Right Section */}
+        <div className="flex items-center space-x-4">
+          {/* Notifications */}
+          <button className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors">
+            <BellIcon className="w-6 h-6 text-gray-600" />
+            <span className="absolute top-1 right-1 w-2 h-2 bg-danger-500 rounded-full"></span>
+          </button>
+
+          {/* User Menu */}
+          <div className="flex items-center space-x-3">
+            <div className="hidden md:block text-right">
+              <p className="text-sm font-medium text-gray-900">Admin Usuario</p>
+              <p className="text-xs text-gray-500">Administrador</p>
+            </div>
+            
+            {/* User Avatar with Dropdown */}
+            <div className="relative group">
+              <button className="flex items-center space-x-2 p-1 rounded-lg hover:bg-gray-100 transition-colors">
+                <div className="w-8 h-8 bg-primary-900 rounded-full flex items-center justify-center">
+                  <span className="text-white text-sm font-medium">AU</span>
+                </div>
+              </button>
+
+              {/* Dropdown Menu */}
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                <div className="py-2">
+                  <a href="#" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                    <UserCircleIcon className="w-4 h-4 mr-3" />
+                    Mi Perfil
+                  </a>
+                  <a href="#" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                    <Cog6ToothIcon className="w-4 h-4 mr-3" />
+                    Configuración
+                  </a>
+                  <hr className="my-2" />
+                  <a href="#" className="flex items-center px-4 py-2 text-sm text-danger-600 hover:bg-danger-50">
+                    <ArrowRightOnRectangleIcon className="w-4 h-4 mr-3" />
+                    Cerrar Sesión
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+};

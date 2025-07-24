@@ -1,9 +1,13 @@
-import React, { useState } from 'react'
-import './App.css'
+// frontend/src/App.tsx
+import React, { useState } from 'react';
+import { Layout } from './components/layout';
+import { useSweetAlert } from './hooks/useSweetAlert';
+import './App.css';
 
 function App() {
-  const [selectedEPS, setSelectedEPS] = useState<string | null>(null)
-  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle')
+  const [selectedEPS, setSelectedEPS] = useState<string | null>(null);
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
+  const { showSuccess, showError, showLoading, close } = useSweetAlert();
 
   // Datos de prueba
   const epsData = [
@@ -12,66 +16,41 @@ function App() {
     { codigo: 'FAMISANAR', nombre: 'FAMISANAR EPS', estado: 'empty' },
     { codigo: 'SANITAS', nombre: 'SANITAS EPS', estado: 'loaded' },
     { codigo: 'SURA', nombre: 'SURA EPS', estado: 'loaded' },
-  ]
+  ];
 
   const handleUpload = () => {
-    setUploadStatus('uploading')
+    setUploadStatus('uploading');
+    showLoading('Cargando archivo Excel...');
+    
     setTimeout(() => {
-      setUploadStatus('success')
-      setTimeout(() => setUploadStatus('idle'), 2000)
-    }, 2000)
-  }
+      setUploadStatus('success');
+      close();
+      showSuccess({
+        title: '¡Archivo cargado exitosamente!',
+        text: 'Se procesaron 1,250 registros correctamente'
+      });
+      setTimeout(() => setUploadStatus('idle'), 2000);
+    }, 2000);
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-primary-900 text-white shadow-lg">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
-                <span className="text-primary-900 font-bold text-lg">A</span>
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold">Alcaldía de Barranquilla</h1>
-                <p className="text-primary-200 text-sm">Sistema de Gestión Presupuestal</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-primary-200">Admin Usuario</span>
-              <div className="w-8 h-8 bg-primary-700 rounded-full"></div>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <div className="container mx-auto px-6 py-8">
-        {/* Breadcrumb */}
-        <nav className="mb-6">
-          <ol className="flex items-center space-x-2 text-sm">
-            <li><span className="text-gray-500">Inicio</span></li>
-            <li><span className="text-gray-400">/</span></li>
-            <li><span className="text-gray-500">Carga de Información</span></li>
-            <li><span className="text-gray-400">/</span></li>
-            <li><span className="text-primary-900 font-medium">Información Cartera</span></li>
-          </ol>
-        </nav>
-
+    <Layout>
+      <div className="space-y-8">
         {/* Title Section */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-primary-900 mb-2">
+        <div>
+          <h1 className="text-3xl font-bold text-primary-900 mb-2">
             📊 Módulo de Carga de Información - Cartera
-          </h2>
+          </h1>
           <p className="text-gray-600">
             Gestión de cartera y distribución de deudas del sector salud (EPS/IPS)
           </p>
         </div>
 
         {/* Upload Section */}
-        <div className="card p-6 mb-8">
-          <h3 className="text-xl font-semibold text-primary-900 mb-4">
+        <div className="card p-6">
+          <h2 className="text-xl font-semibold text-primary-900 mb-4">
             📁 Cargar Archivo Excel
-          </h3>
+          </h2>
           
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center mb-4 hover:border-primary-500 transition-colors">
             <div className="text-4xl mb-4">📄</div>
@@ -113,11 +92,11 @@ function App() {
         </div>
 
         {/* Control de Carga */}
-        <div className="card mb-8">
+        <div className="card">
           <div className="p-6 border-b border-gray-200">
-            <h3 className="text-xl font-semibold text-primary-900">
+            <h2 className="text-xl font-semibold text-primary-900">
               📋 Control de Carga por EPS
-            </h3>
+            </h2>
             <p className="text-gray-600 text-sm mt-1">
               Estado de carga de información por entidad promotora de salud
             </p>
@@ -198,9 +177,9 @@ function App() {
         {selectedEPS && (
           <div className="card">
             <div className="p-6 border-b border-gray-200">
-              <h3 className="text-xl font-semibold text-primary-900">
+              <h2 className="text-xl font-semibold text-primary-900">
                 📊 Detalle de Cartera - {selectedEPS}
-              </h3>
+              </h2>
               <p className="text-gray-600 text-sm mt-1">
                 Información detallada por IPS y plazos de vencimiento
               </p>
@@ -260,18 +239,18 @@ function App() {
         )}
 
         {/* Status Footer */}
-        <div className="mt-8 text-center">
+        <div className="text-center">
           <div className="inline-flex items-center space-x-2 bg-white rounded-full px-4 py-2 shadow-sm border">
             <div className="w-3 h-3 bg-success-500 rounded-full animate-pulse"></div>
             <span className="text-sm text-gray-700">Sistema funcionando correctamente</span>
             <div className="text-xs text-gray-500">
-              | Tailwind CSS ✅ | React ✅ | Vite ✅
+              | Sidebar ✅ | Heroicons ✅ | Layout ✅
             </div>
           </div>
         </div>
       </div>
-    </div>
-  )
+    </Layout>
+  );
 }
 
-export default App
+export default App;
