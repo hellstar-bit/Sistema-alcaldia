@@ -1,4 +1,4 @@
-// backend/src/modules/cartera/cartera.controller.ts
+// backend/src/modules/cartera/cartera.controller.ts - CON DEBUG AÑADIDO
 import { 
   Controller, 
   Get, 
@@ -9,7 +9,8 @@ import {
   UploadedFile, 
   Res,
   BadRequestException,
-  UseGuards
+  UseGuards,
+  Request
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
@@ -28,15 +29,23 @@ export class CarteraController {
   // ENDPOINTS PARA EPS
   // ===============================================
   @Get('eps')
-  async getAllEPS() {
+  async getAllEPS(@Request() req: any) {
+    console.log('📊 CarteraController: GET /cartera/eps', {
+      user: req.user?.email || 'No user',
+      userId: req.user?.id || 'No ID',
+    });
+
     try {
       const eps = await this.carteraService.getAllEPS();
+      console.log('✅ CarteraController: EPS obtenidas exitosamente:', eps.length);
+      
       return {
         success: true,
         message: 'EPS obtenidas exitosamente',
         data: eps
       };
     } catch (error) {
+      console.error('❌ CarteraController: Error al obtener EPS:', error);
       return {
         success: false,
         message: error.message,
@@ -49,15 +58,22 @@ export class CarteraController {
   // ENDPOINTS PARA PERÍODOS
   // ===============================================
   @Get('periodos')
-  async getAllPeriodos() {
+  async getAllPeriodos(@Request() req: any) {
+    console.log('📅 CarteraController: GET /cartera/periodos', {
+      user: req.user?.email || 'No user',
+    });
+
     try {
       const periodos = await this.carteraService.getAllPeriodos();
+      console.log('✅ CarteraController: Períodos obtenidos exitosamente:', periodos.length);
+      
       return {
         success: true,
         message: 'Períodos obtenidos exitosamente',
         data: periodos
       };
     } catch (error) {
+      console.error('❌ CarteraController: Error al obtener períodos:', error);
       return {
         success: false,
         message: error.message,
@@ -67,7 +83,11 @@ export class CarteraController {
   }
 
   @Post('periodos/initialize')
-  async initializePeriodos() {
+  async initializePeriodos(@Request() req: any) {
+    console.log('🔧 CarteraController: POST /cartera/periodos/initialize', {
+      user: req.user?.email || 'No user',
+    });
+
     try {
       await this.carteraService.initializePeriodos();
       return {
@@ -76,6 +96,7 @@ export class CarteraController {
         data: null
       };
     } catch (error) {
+      console.error('❌ CarteraController: Error al inicializar períodos:', error);
       return {
         success: false,
         message: error.message,
@@ -88,15 +109,22 @@ export class CarteraController {
   // ENDPOINTS PARA IPS
   // ===============================================
   @Get('ips')
-  async getAllIPS() {
+  async getAllIPS(@Request() req: any) {
+    console.log('🏥 CarteraController: GET /cartera/ips', {
+      user: req.user?.email || 'No user',
+    });
+
     try {
       const ips = await this.carteraService.getAllIPS();
+      console.log('✅ CarteraController: IPS obtenidas exitosamente:', ips.length);
+      
       return {
         success: true,
         message: 'IPS obtenidas exitosamente',
         data: ips
       };
     } catch (error) {
+      console.error('❌ CarteraController: Error al obtener IPS:', error);
       return {
         success: false,
         message: error.message,
@@ -109,9 +137,16 @@ export class CarteraController {
   // ENDPOINTS PARA DATOS DE CARTERA
   // ===============================================
   @Get('data')
-  async getCarteraData(@Query() filters: CarteraFilterDto) {
+  async getCarteraData(@Query() filters: CarteraFilterDto, @Request() req: any) {
+    console.log('💰 CarteraController: GET /cartera/data', {
+      user: req.user?.email || 'No user',
+      filters,
+    });
+
     try {
       const result = await this.carteraService.getCarteraData(filters);
+      console.log('✅ CarteraController: Datos de cartera obtenidos:', result.data.length);
+      
       return {
         success: true,
         message: 'Datos de cartera obtenidos exitosamente',
@@ -127,6 +162,7 @@ export class CarteraController {
         }
       };
     } catch (error) {
+      console.error('❌ CarteraController: Error al obtener datos de cartera:', error);
       return {
         success: false,
         message: error.message,
@@ -136,7 +172,12 @@ export class CarteraController {
   }
 
   @Post('data')
-  async createCarteraData(@Body() createDto: CreateCarteraDataDto) {
+  async createCarteraData(@Body() createDto: CreateCarteraDataDto, @Request() req: any) {
+    console.log('➕ CarteraController: POST /cartera/data', {
+      user: req.user?.email || 'No user',
+      createDto,
+    });
+
     try {
       const carteraData = await this.carteraService.createCarteraData(createDto);
       return {
@@ -145,6 +186,7 @@ export class CarteraController {
         data: carteraData
       };
     } catch (error) {
+      console.error('❌ CarteraController: Error al crear datos de cartera:', error);
       return {
         success: false,
         message: error.message,
@@ -154,15 +196,22 @@ export class CarteraController {
   }
 
   @Get('status')
-  async getEPSPeriodoStatus() {
+  async getEPSPeriodoStatus(@Request() req: any) {
+    console.log('📈 CarteraController: GET /cartera/status', {
+      user: req.user?.email || 'No user',
+    });
+
     try {
       const status = await this.carteraService.getEPSPeriodoStatus();
+      console.log('✅ CarteraController: Estado EPS-Período obtenido:', status.length);
+      
       return {
         success: true,
         message: 'Estado EPS-Período obtenido exitosamente',
         data: status
       };
     } catch (error) {
+      console.error('❌ CarteraController: Error al obtener estado:', error);
       return {
         success: false,
         message: error.message,
@@ -175,7 +224,11 @@ export class CarteraController {
   // ENDPOINTS PARA EXCEL
   // ===============================================
   @Get('plantilla')
-  async downloadPlantilla(@Res() res: Response) {
+  async downloadPlantilla(@Res() res: Response, @Request() req: any) {
+    console.log('📄 CarteraController: GET /cartera/plantilla', {
+      user: req.user?.email || 'No user',
+    });
+
     try {
       const buffer = await this.carteraService.generatePlantillaExcel();
       
@@ -187,6 +240,7 @@ export class CarteraController {
 
       res.send(buffer);
     } catch (error) {
+      console.error('❌ CarteraController: Error al generar plantilla:', error);
       res.status(500).json({
         success: false,
         message: error.message,
@@ -199,8 +253,15 @@ export class CarteraController {
   @UseInterceptors(FileInterceptor('file'))
   async uploadExcel(
     @UploadedFile() file: Express.Multer.File,
-    @Body() uploadDto: UploadExcelDto
+    @Body() uploadDto: UploadExcelDto,
+    @Request() req: any
   ) {
+    console.log('📤 CarteraController: POST /cartera/upload', {
+      user: req.user?.email || 'No user',
+      hasFile: !!file,
+      uploadDto,
+    });
+
     if (!file) {
       throw new BadRequestException('No se ha subido ningún archivo');
     }
@@ -216,6 +277,8 @@ export class CarteraController {
         uploadDto.periodoId
       );
 
+      console.log('✅ CarteraController: Excel procesado exitosamente:', result.processed);
+
       return {
         success: result.success,
         message: result.message,
@@ -225,6 +288,7 @@ export class CarteraController {
         }
       };
     } catch (error) {
+      console.error('❌ CarteraController: Error al procesar Excel:', error);
       return {
         success: false,
         message: error.message,
@@ -234,7 +298,12 @@ export class CarteraController {
   }
 
   @Get('export')
-  async exportToExcel(@Query() filters: CarteraFilterDto, @Res() res: Response) {
+  async exportToExcel(@Query() filters: CarteraFilterDto, @Res() res: Response, @Request() req: any) {
+    console.log('📋 CarteraController: GET /cartera/export', {
+      user: req.user?.email || 'No user',
+      filters,
+    });
+
     try {
       const buffer = await this.carteraService.exportCarteraToExcel(filters);
       
@@ -248,6 +317,7 @@ export class CarteraController {
 
       res.send(buffer);
     } catch (error) {
+      console.error('❌ CarteraController: Error al exportar:', error);
       res.status(500).json({
         success: false,
         message: error.message,

@@ -1,4 +1,4 @@
-// backend/src/modules/auth/auth.service.ts
+// backend/src/modules/auth/auth.service.ts - VERSIÓN CON DEBUG MEJORADO
 import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -51,6 +51,8 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto): Promise<{ user: Partial<User>; token: string }> {
+    console.log('🔐 AuthService: Iniciando login para:', loginDto.email);
+    
     const { email, password } = loginDto;
 
     // Buscar usuario
@@ -59,15 +61,21 @@ export class AuthService {
     });
 
     if (!user) {
+      console.log('❌ AuthService: Usuario no encontrado:', email);
       throw new UnauthorizedException('Credenciales inválidas');
     }
+
+    console.log('👤 AuthService: Usuario encontrado:', user.email);
 
     // Verificar contraseña
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
+      console.log('❌ AuthService: Contraseña inválida para:', email);
       throw new UnauthorizedException('Credenciales inválidas');
     }
+
+    console.log('✅ AuthService: Contraseña válida para:', email);
 
     // Actualizar último login
     await this.userRepository.update(user.id, {
@@ -76,6 +84,12 @@ export class AuthService {
 
     // Generar token
     const token = await this.generateToken(user);
+
+    console.log('🎟️ AuthService: Token generado exitosamente', {
+      userId: user.id,
+      email: user.email,
+      tokenPreview: token.substring(0, 30) + '...',
+    });
 
     // Remover contraseña de la respuesta
     const { password: _, ...userResponse } = user;
@@ -87,9 +101,24 @@ export class AuthService {
   }
 
   async validateUser(userId: string): Promise<User | null> {
-    return await this.userRepository.findOne({
-      where: { id: userId, isActive: true }
-    });
+    console.log('🔍 AuthService: Validando usuario con ID:', userId);
+    
+    try {
+      const user = await this.userRepository.findOne({
+        where: { id: userId, isActive: true }
+      });
+
+      if (user) {
+        console.log('✅ AuthService: Usuario válido encontrado:', user.email);
+      } else {
+        console.log('❌ AuthService: Usuario no encontrado o inactivo para ID:', userId);
+      }
+
+      return user;
+    } catch (error) {
+      console.error('❌ AuthService: Error al validar usuario:', error);
+      return null;
+    }
   }
 
   private async generateToken(user: User): Promise<string> {
@@ -97,9 +126,19 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       role: user.role,
+      iat: Math.floor(Date.now() / 1000), // Tiempo actual en segundos
     };
 
-    return this.jwtService.sign(payload);
+    console.log('🔧 AuthService: Generando token con payload:', payload);
+
+    try {
+      const token = this.jwtService.sign(payload);
+      console.log('✅ AuthService: Token firmado exitosamente');
+      return token;
+    } catch (error) {
+      console.error('❌ AuthService: Error al firmar token:', error);
+      throw new Error('Error al generar token');
+    }
   }
 
   async createDefaultAdmin(): Promise<void> {
@@ -122,6 +161,8 @@ export class AuthService {
 
       await this.userRepository.save(admin);
       console.log('👤 Usuario administrador creado: admin@barranquilla.gov.co / admin123');
+    } else {
+      console.log('👤 Usuario administrador ya existe');
     }
   }
 }
