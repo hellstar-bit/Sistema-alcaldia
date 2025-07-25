@@ -1,6 +1,7 @@
 // backend/src/modules/cartera/entities/ips.entity.ts
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, OneToMany, ManyToMany } from 'typeorm';
 import { CarteraData } from './cartera-data.entity';
+import { EPS } from './eps.entity';
 
 @Entity('ips')
 export class IPS {
@@ -25,6 +26,12 @@ export class IPS {
   @Column({ nullable: true })
   email: string;
 
+  @Column({ nullable: true })
+  contacto: string;
+
+  @Column({ nullable: true })
+  tipoServicio: string; // Ejemplo: "Ambulatorio", "Hospitalario", "Mixto"
+
   @Column({ default: true })
   activa: boolean;
 
@@ -36,4 +43,8 @@ export class IPS {
 
   @OneToMany(() => CarteraData, cartera => cartera.ips)
   carteraData: CarteraData[];
+
+  // Relación Many-to-Many con EPS
+  @ManyToMany(() => EPS, eps => eps.ipsAsignadas)
+  eps: EPS[];
 }

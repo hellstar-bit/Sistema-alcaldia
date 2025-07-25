@@ -2,12 +2,22 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MulterModule } from '@nestjs/platform-express';
-import { CarteraController } from './cartera.controller';
-import { CarteraService } from './cartera.service';
+
+// Entities
 import { EPS } from './entities/eps.entity';
 import { IPS } from './entities/ips.entity';
 import { Periodo } from './entities/periodo.entity';
 import { CarteraData } from './entities/cartera-data.entity';
+
+// Controllers
+import { CarteraController } from './cartera.controller';
+import { EPSController } from './controllers/eps.controller';
+import { IPSController } from './controllers/ips.controller';
+
+// Services
+import { CarteraService } from './cartera.service';
+import { EPSService } from './services/eps.service';
+import { IPSService } from './services/ips.service';
 
 @Module({
   imports: [
@@ -18,8 +28,20 @@ import { CarteraData } from './entities/cartera-data.entity';
       },
     }),
   ],
-  controllers: [CarteraController],
-  providers: [CarteraService],
-  exports: [CarteraService],
+  controllers: [
+    CarteraController,
+    EPSController,
+    IPSController
+  ],
+  providers: [
+    CarteraService,
+    EPSService,
+    IPSService
+  ],
+  exports: [
+    CarteraService,
+    EPSService,
+    IPSService
+  ],
 })
 export class CarteraModule {}

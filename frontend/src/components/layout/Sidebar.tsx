@@ -1,4 +1,4 @@
-// frontend/src/components/layout/Sidebar.tsx - VERSIÓN CON NAVEGACIÓN REAL
+// frontend/src/components/layout/Sidebar.tsx - CON MÓDULO DE GESTIÓN
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -19,7 +19,10 @@ import {
   UserGroupIcon,
   DocumentChartBarIcon,
   ServerIcon,
-  Bars3Icon
+  Bars3Icon,
+  WrenchScrewdriverIcon,
+  BuildingOfficeIcon,
+  AcademicCapIcon
 } from '@heroicons/react/24/outline';
 
 interface MenuItem {
@@ -54,8 +57,7 @@ const menuItems: MenuItem[] = [
         id: 'info-cartera',
         label: 'Información Cartera',
         icon: CreditCardIcon,
-        href: '/carga/cartera',
-        badge: 'Nuevo'
+        href: '/carga/cartera'
       },
       {
         id: 'info-flujo',
@@ -138,6 +140,26 @@ const menuItems: MenuItem[] = [
         label: 'Flujo',
         icon: BanknotesIcon,
         href: '/base/flujo'
+      }
+    ]
+  },
+  // NUEVO MÓDULO DE GESTIÓN
+  {
+    id: 'gestion',
+    label: 'Gestión EPS e IPS',
+    icon: WrenchScrewdriverIcon,
+    children: [
+      {
+        id: 'gestion-eps',
+        label: 'Gestión de EPS',
+        icon: BuildingOfficeIcon,
+        href: '/gestion/eps'
+      },
+      {
+        id: 'gestion-ips',
+        label: 'Gestión de IPS',
+        icon: AcademicCapIcon,
+        href: '/gestion/ips'
       }
     ]
   },
@@ -272,6 +294,11 @@ const MenuItemComponent: React.FC<{
         {showTooltip && (
           <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 whitespace-nowrap">
             {item.label}
+            {item.badge && (
+              <span className="ml-2 bg-success-600 text-white text-xs px-1 py-0.5 rounded">
+                {item.badge}
+              </span>
+            )}
             <div className="absolute top-1/2 left-0 transform -translate-y-1/2 -translate-x-1 w-2 h-2 bg-gray-900 rotate-45"></div>
           </div>
         )}
@@ -358,11 +385,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, isCollapsed,
           {!isCollapsed && (
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
-                <span className="text-primary-900 font-bold text-sm">A</span>
+                <span className="text-primary-900 font-bold text-sm">SGP</span>
               </div>
               <div>
-                <h2 className="text-base font-bold">SGP</h2>
-                <p className="text-xs text-primary-200">Sistema de Gestión</p>
+                <h2 className="text-base font-bold">Sistema de Gestión</h2>
+                <p className="text-xs text-primary-200">Presupuestal</p>
               </div>
             </div>
           )}
@@ -471,11 +498,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, isCollapsed,
                   <span className="text-xs text-gray-600">Cargar</span>
                 </button>
                 <button 
-                  onClick={() => navigate('/reportes/mensuales')}
+                  onClick={() => navigate('/gestion/eps')}
                   className="flex flex-col items-center p-2 rounded-lg hover:bg-gray-50 transition-colors"
                 >
-                  <ChartBarIcon className="w-4 h-4 text-primary-600 mb-1" />
-                  <span className="text-xs text-gray-600">Reportes</span>
+                  <WrenchScrewdriverIcon className="w-4 h-4 text-primary-600 mb-1" />
+                  <span className="text-xs text-gray-600">Gestión</span>
                 </button>
                 <button 
                   onClick={() => navigate('/config/parametros')}
