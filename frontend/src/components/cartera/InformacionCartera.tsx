@@ -219,11 +219,18 @@ const InformacionCartera: React.FC = () => {
 };
 
   const loadCarteraData = async (epsId?: string, periodoId?: string) => {
-  // Usar parámetros si se proporcionan, sino usar el estado
   const finalEpsId = epsId || selectedEPS?.id;
   const finalPeriodoId = periodoId || selectedPeriodo?.id;
   
+  console.log('🔍 DEBUG: loadCarteraData called with:', {
+    epsId: finalEpsId,
+    periodoId: finalPeriodoId,
+    selectedEPS: selectedEPS?.nombre,
+    selectedPeriodo: selectedPeriodo?.nombre
+  });
+  
   if (!finalEpsId || !finalPeriodoId) {
+    console.log('❌ DEBUG: Missing EPS or Periodo ID');
     setCarteraData([]);
     return;
   }
@@ -237,16 +244,69 @@ const InformacionCartera: React.FC = () => {
       limit: 1000
     });
 
+    console.log('📡 DEBUG: API response:', response);
+
     if (response.success && response.data) {
       const dataArray = Array.isArray(response.data) ? response.data : response.data.data;
+      console.log('📊 DEBUG: Data array:', {
+        isArray: Array.isArray(dataArray),
+        length: dataArray?.length,
+        hasData: dataArray && dataArray.length > 0
+      });
+      
       setCarteraData(Array.isArray(dataArray) ? dataArray : []);
       
-      // *** NUEVO: Actualizar el estado después de cargar datos exitosamente ***
-      if (Array.isArray(dataArray) && dataArray.length > 0) {
-        await updateEPSPeriodoStatus();
+      // *** ACTUALIZACIÓN INMEDIATA DEL ESTADO ***
+      if (Array.isArray(dataArray)) {
+        const hasData = dataArray.length > 0;
+        console.log('🔄 DEBUG: Updating status locally:', {
+          epsId: finalEpsId,
+          periodoId: finalPeriodoId,
+          hasData
+        });
+        
+        // Actualizar estado local inmediatamente
+        setEpsPeriodoStatus(prevStatus => {
+          console.log('📋 DEBUG: Previous status:', prevStatus);
+          
+          const existingIndex = prevStatus.findIndex(
+            item => item.epsId === finalEpsId && item.periodoId === finalPeriodoId
+          );
+          
+          console.log('🔍 DEBUG: Existing index:', existingIndex);
+          
+          let newStatus;
+          if (existingIndex >= 0) {
+            // Actualizar existente
+            newStatus = [...prevStatus];
+            newStatus[existingIndex] = {
+              ...newStatus[existingIndex],
+              tieneData: hasData,
+              totalRegistros: hasData ? dataArray.length : 0,
+              totalCartera: hasData ? dataArray.reduce((sum, item) => sum + (item.total || 0), 0) : 0
+            };
+            console.log('✏️ DEBUG: Updated existing record');
+          } else if (hasData) {
+            // Agregar nuevo
+            newStatus = [...prevStatus, {
+              epsId: finalEpsId,
+              periodoId: finalPeriodoId,
+              tieneData: true,
+              totalRegistros: dataArray.length,
+              totalCartera: dataArray.reduce((sum, item) => sum + (item.total || 0), 0)
+            }];
+            console.log('➕ DEBUG: Added new record');
+          } else {
+            newStatus = prevStatus;
+            console.log('⏭️ DEBUG: No changes needed');
+          }
+          
+          console.log('📋 DEBUG: New status:', newStatus);
+          return newStatus;
+        });
       }
     } else {
-      console.warn('Cartera data response failed or invalid:', response);
+      console.warn('❌ DEBUG: API response failed:', response);
       setCarteraData([]);
       showError({ 
         title: 'Error', 
@@ -254,7 +314,7 @@ const InformacionCartera: React.FC = () => {
       });
     }
   } catch (error: any) {
-    console.error('Error loading cartera data:', error);
+    console.error('❌ DEBUG: Error in loadCarteraData:', error);
     setCarteraData([]);
     showError({ 
       title: 'Error', 
@@ -274,10 +334,26 @@ const InformacionCartera: React.FC = () => {
   };
 
   const hasDataForEPSYearMonth = (epsId: string, year: number, mes: number): boolean => {
-    const periodo = findPeriodoByYearAndMonth(year, mes);
-    if (!periodo) return false;
-    return carteraUtils.hasDataForPeriod(epsPeriosoStatus, epsId, periodo.id);
-  };
+  const periodo = findPeriodoByYearAndMonth(year, mes);
+  if (!periodo) {
+    console.log(`🔍 DEBUG: No periodo found for ${year}-${mes}`);
+    return false;
+  }
+  
+  const hasData = carteraUtils.hasDataForPeriod(epsPeriosoStatus, epsId, periodo.id);
+  
+  console.log(`🔍 DEBUG: hasDataForEPSYearMonth`, {
+    epsId,
+    year,
+    mes,
+    periodoId: periodo.id,
+    hasData,
+    statusLength: epsPeriosoStatus.length,
+    relevantStatus: epsPeriosoStatus.filter(s => s.epsId === epsId && s.periodoId === periodo.id)
+  });
+  
+  return hasData;
+};
 
   const getAvailableYears = (): number[] => {
     const years = Array.from(new Set(periodosList.map(p => p.year))).sort((a, b) => b - a);
@@ -329,14 +405,43 @@ const InformacionCartera: React.FC = () => {
   setSelectedPeriodo(periodo);
   await loadCarteraData(selectedEPS.id, periodo.id);
 };
+  const forceRefreshStatus = async () => {
+  console.log('🔄 DEBUG: Force refreshing status...');
+  try {
+    const statusResponse = await carteraAPI.getEPSPeriodoStatus();
+    if (statusResponse.success && Array.isArray(statusResponse.data)) {
+      console.log('✅ DEBUG: Fresh status from server:', statusResponse.data);
+      setEpsPeriodoStatus(statusResponse.data);
+      
+      // También actualizar datos de cartera si hay selección
+      if (selectedEPS && selectedPeriodo) {
+        await loadCarteraData(selectedEPS.id, selectedPeriodo.id);
+      }
+    }
+  } catch (error) {
+    console.error('❌ DEBUG: Error in force refresh:', error);
+  }
+};
 
   const handleUploadSuccess = async () => {
+  console.log('📤 DEBUG: Upload success, updating data...');
   setShowUploadModal(false);
   
-  // Recargar datos y actualizar estado
   if (selectedEPS && selectedPeriodo) {
+    console.log('🔄 DEBUG: Reloading data after upload');
     await loadCarteraData(selectedEPS.id, selectedPeriodo.id);
-    // El loadCarteraData ya actualiza el estado, no necesitamos hacerlo aquí
+    
+    // Forzar actualización del estado desde el servidor
+    try {
+      console.log('🔄 DEBUG: Fetching fresh status from server');
+      const statusResponse = await carteraAPI.getEPSPeriodoStatus();
+      if (statusResponse.success && Array.isArray(statusResponse.data)) {
+        console.log('✅ DEBUG: Updated status from server:', statusResponse.data);
+        setEpsPeriodoStatus(statusResponse.data);
+      }
+    } catch (error) {
+      console.error('❌ DEBUG: Error updating status from server:', error);
+    }
   }
 };
 

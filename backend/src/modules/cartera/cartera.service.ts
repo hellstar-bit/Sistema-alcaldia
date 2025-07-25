@@ -270,17 +270,21 @@ export class CarteraService {
   }
 
   async getEPSPeriodoStatus(): Promise<Array<{
-    epsId: string,
-    periodoId: string,
-    tieneData: boolean,
-    totalRegistros: number,
-    totalCartera: number
-  }>> {
+  epsId: string,
+  periodoId: string,
+  tieneData: boolean,
+  totalRegistros: number,
+  totalCartera: number
+}>> {
+  console.log('📊 CarteraService: getEPSPeriodoStatus - Calculating status...');
+
+  try {
+    // Obtener todos los registros activos de cartera agrupados por EPS y período
     const result = await this.carteraDataRepository
       .createQueryBuilder('cartera')
       .select([
-        'cartera.epsId',
-        'cartera.periodoId',
+        'cartera.epsId as epsId',
+        'cartera.periodoId as periodoId', 
         'COUNT(cartera.id) as totalRegistros',
         'SUM(cartera.total) as totalCartera'
       ])
@@ -288,14 +292,27 @@ export class CarteraService {
       .groupBy('cartera.epsId, cartera.periodoId')
       .getRawMany();
 
-    return result.map(item => ({
-      epsId: item.cartera_epsId,
-      periodoId: item.cartera_periodoId,
+    console.log('📊 CarteraService: Raw query result:', result);
+
+    // Transformar los resultados al formato esperado
+    const statusArray = result.map(item => ({
+      epsId: item.epsId,
+      periodoId: item.periodoId,
       tieneData: parseInt(item.totalRegistros) > 0,
-      totalRegistros: parseInt(item.totalRegistros),
+      totalRegistros: parseInt(item.totalRegistros) || 0,
       totalCartera: parseFloat(item.totalCartera) || 0
     }));
+
+    console.log('📊 CarteraService: Processed status array:', statusArray);
+    console.log(`📊 CarteraService: Found ${statusArray.length} EPS-Periodo combinations with data`);
+
+    return statusArray;
+  } catch (error) {
+    console.error('❌ CarteraService: Error calculating EPS periodo status:', error);
+    throw new BadRequestException(`Error al obtener estado de períodos: ${error.message}`);
   }
+}
+
 
   // ===============================================
   // MÉTODOS PARA EXCEL
