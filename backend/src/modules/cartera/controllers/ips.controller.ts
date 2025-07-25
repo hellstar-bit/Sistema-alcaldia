@@ -12,7 +12,8 @@ import {
   Request,
   Patch,
   ValidationPipe,
-  UsePipes
+  UsePipes,
+  BadRequestException
 } from '@nestjs/common';
 import { IPSService } from '../services/ips.service';
 import { CreateIPSDto, UpdateIPSDto, IPSFilterDto } from '../dto/ips.dto';
@@ -24,20 +25,89 @@ export class IPSController {
   constructor(private readonly ipsService: IPSService) {}
 
   @Get()
-  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
-  async getAllIPS(@Query() filters: IPSFilterDto, @Request() req: any) {
-    console.log('🏥 IPSController: GET /ips', {
-      user: req.user?.email || 'No user',
-      filters,
-      filtersTypes: {
-        soloActivas: typeof filters.soloActivas,
-        sinAsignar: typeof filters.sinAsignar,
-        page: typeof filters.page,
-        limit: typeof filters.limit
-      }
-    });
+  async getAllIPS(@Query() rawQuery: any, @Request() req: any) {
+    console.log('🏥 IPSController: GET /ips - RAW QUERY:', rawQuery);
 
     try {
+      // Transformación manual para evitar problemas de validación
+      const filters: IPSFilterDto = {};
+
+      // Procesar search
+      if (rawQuery.search && typeof rawQuery.search === 'string') {
+        filters.search = rawQuery.search;
+      }
+
+      // Procesar soloActivas
+      if (rawQuery.soloActivas !== undefined && rawQuery.soloActivas !== null) {
+        if (typeof rawQuery.soloActivas === 'string') {
+          filters.soloActivas = rawQuery.soloActivas.toLowerCase() === 'true';
+        } else if (typeof rawQuery.soloActivas === 'boolean') {
+          filters.soloActivas = rawQuery.soloActivas;
+        }
+      }
+
+      // Procesar sinAsignar
+      if (rawQuery.sinAsignar !== undefined && rawQuery.sinAsignar !== null) {
+        if (typeof rawQuery.sinAsignar === 'string') {
+          filters.sinAsignar = rawQuery.sinAsignar.toLowerCase() === 'true';
+        } else if (typeof rawQuery.sinAsignar === 'boolean') {
+          filters.sinAsignar = rawQuery.sinAsignar;
+        }
+      }
+
+      // Procesar tipoServicio
+      if (rawQuery.tipoServicio && typeof rawQuery.tipoServicio === 'string') {
+        filters.tipoServicio = rawQuery.tipoServicio;
+      }
+
+      // Procesar epsId
+      if (rawQuery.epsId && typeof rawQuery.epsId === 'string') {
+        filters.epsId = rawQuery.epsId;
+      }
+
+      // Procesar orderBy
+      if (rawQuery.orderBy && typeof rawQuery.orderBy === 'string') {
+        const validOrderBy = ['nombre', 'codigo', 'createdAt'];
+        if (validOrderBy.includes(rawQuery.orderBy)) {
+          filters.orderBy = rawQuery.orderBy as 'nombre' | 'codigo' | 'createdAt';
+        }
+      }
+
+      // Procesar orderDirection
+      if (rawQuery.orderDirection && typeof rawQuery.orderDirection === 'string') {
+        const validDirections = ['ASC', 'DESC'];
+        if (validDirections.includes(rawQuery.orderDirection.toUpperCase())) {
+          filters.orderDirection = rawQuery.orderDirection.toUpperCase() as 'ASC' | 'DESC';
+        }
+      }
+
+      // Procesar page
+      if (rawQuery.page !== undefined && rawQuery.page !== null) {
+        const page = parseInt(String(rawQuery.page), 10);
+        if (!isNaN(page) && page > 0) {
+          filters.page = page;
+        }
+      }
+
+      // Procesar limit
+      if (rawQuery.limit !== undefined && rawQuery.limit !== null) {
+        const limit = parseInt(String(rawQuery.limit), 10);
+        if (!isNaN(limit) && limit > 0 && limit <= 10000) {
+          filters.limit = limit;
+        }
+      }
+
+      console.log('🏥 IPSController: PROCESSED FILTERS:', {
+        user: req.user?.email || 'No user',
+        filters,
+        filtersTypes: {
+          soloActivas: typeof filters.soloActivas,
+          sinAsignar: typeof filters.sinAsignar,
+          page: typeof filters.page,
+          limit: typeof filters.limit
+        }
+      });
+
       const result = await this.ipsService.getAllIPS(filters);
       console.log('✅ IPSController: IPS obtenidas:', result.data.length);
       
@@ -56,11 +126,11 @@ export class IPSController {
       };
     } catch (error) {
       console.error('❌ IPSController: Error al obtener IPS:', error);
-      return {
+      throw new BadRequestException({
         success: false,
-        message: error.message,
+        message: error.message || 'Error al procesar la solicitud',
         data: null
-      };
+      });
     }
   }
 
@@ -79,11 +149,11 @@ export class IPSController {
       };
     } catch (error) {
       console.error('❌ IPSController: Error al obtener estadísticas:', error);
-      return {
+      throw new BadRequestException({
         success: false,
-        message: error.message,
+        message: error.message || 'Error al obtener estadísticas',
         data: null
-      };
+      });
     }
   }
 
@@ -102,11 +172,11 @@ export class IPSController {
       };
     } catch (error) {
       console.error('❌ IPSController: Error al obtener IPS sin asignar:', error);
-      return {
+      throw new BadRequestException({
         success: false,
-        message: error.message,
+        message: error.message || 'Error al obtener IPS sin asignar',
         data: null
-      };
+      });
     }
   }
 
@@ -126,11 +196,11 @@ export class IPSController {
       };
     } catch (error) {
       console.error('❌ IPSController: Error al obtener IPS:', error);
-      return {
+      throw new BadRequestException({
         success: false,
-        message: error.message,
+        message: error.message || 'Error al obtener IPS',
         data: null
-      };
+      });
     }
   }
 
@@ -152,11 +222,11 @@ export class IPSController {
       };
     } catch (error) {
       console.error('❌ IPSController: Error al crear IPS:', error);
-      return {
+      throw new BadRequestException({
         success: false,
-        message: error.message,
+        message: error.message || 'Error al crear IPS',
         data: null
-      };
+      });
     }
   }
 
@@ -177,11 +247,11 @@ export class IPSController {
       };
     } catch (error) {
       console.error('❌ IPSController: Error al actualizar IPS:', error);
-      return {
+      throw new BadRequestException({
         success: false,
-        message: error.message,
+        message: error.message || 'Error al actualizar IPS',
         data: null
-      };
+      });
     }
   }
 
@@ -201,11 +271,11 @@ export class IPSController {
       };
     } catch (error) {
       console.error('❌ IPSController: Error al eliminar IPS:', error);
-      return {
+      throw new BadRequestException({
         success: false,
-        message: error.message,
+        message: error.message || 'Error al eliminar IPS',
         data: null
-      };
+      });
     }
   }
 
@@ -225,11 +295,11 @@ export class IPSController {
       };
     } catch (error) {
       console.error('❌ IPSController: Error al cambiar estado:', error);
-      return {
+      throw new BadRequestException({
         success: false,
-        message: error.message,
+        message: error.message || 'Error al cambiar estado',
         data: null
-      };
+      });
     }
   }
 }

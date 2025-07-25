@@ -132,10 +132,14 @@ export class CarteraService {
   // MÉTODOS PARA DATOS DE CARTERA
   // ===============================================
   async getCarteraData(filters: CarteraFilterDto): Promise<{
-    data: CarteraData[],
-    total: number,
-    totalCartera: number
-  }> {
+  data: CarteraData[],
+  total: number,
+  totalCartera: number
+}> {
+  console.log('💰 CarteraService: getCarteraData - Filters:', filters);
+
+  try {
+    // Construir la consulta base
     const queryBuilder = this.carteraDataRepository
       .createQueryBuilder('cartera')
       .leftJoinAndSelect('cartera.eps', 'eps')
@@ -143,19 +147,24 @@ export class CarteraService {
       .leftJoinAndSelect('cartera.periodo', 'periodo')
       .where('cartera.activo = :activo', { activo: true });
 
+    // Aplicar filtros
     if (filters.epsId) {
+      console.log('Applying epsId filter:', filters.epsId);
       queryBuilder.andWhere('cartera.epsId = :epsId', { epsId: filters.epsId });
     }
 
     if (filters.periodoId) {
+      console.log('Applying periodoId filter:', filters.periodoId);
       queryBuilder.andWhere('cartera.periodoId = :periodoId', { periodoId: filters.periodoId });
     }
 
     if (filters.ipsId) {
+      console.log('Applying ipsId filter:', filters.ipsId);
       queryBuilder.andWhere('cartera.ipsId = :ipsId', { ipsId: filters.ipsId });
     }
 
     if (filters.search) {
+      console.log('Applying search filter:', filters.search);
       queryBuilder.andWhere(
         '(ips.nombre ILIKE :search OR ips.codigo ILIKE :search)',
         { search: `%${filters.search}%` }
@@ -163,30 +172,55 @@ export class CarteraService {
     }
 
     if (filters.soloConDatos) {
+      console.log('Applying soloConDatos filter:', filters.soloConDatos);
       queryBuilder.andWhere('cartera.total > 0');
     }
 
     // Contar total antes de paginación
     const total = await queryBuilder.getCount();
+    console.log('Total count before pagination:', total);
 
-    // Calcular total de cartera
-    const totalResult = await queryBuilder
+    // Calcular total de cartera usando una consulta separada más simple
+    const totalResult = await this.carteraDataRepository
+      .createQueryBuilder('cartera')
       .select('SUM(cartera.total)', 'totalCartera')
+      .where('cartera.activo = :activo', { activo: true })
+      .andWhere(filters.epsId ? 'cartera.epsId = :epsId' : '1=1', filters.epsId ? { epsId: filters.epsId } : {})
+      .andWhere(filters.periodoId ? 'cartera.periodoId = :periodoId' : '1=1', filters.periodoId ? { periodoId: filters.periodoId } : {})
+      .andWhere(filters.ipsId ? 'cartera.ipsId = :ipsId' : '1=1', filters.ipsId ? { ipsId: filters.ipsId } : {})
       .getRawOne();
-    const totalCartera = parseFloat(totalResult.totalCartera) || 0;
 
-    // Aplicar paginación
+    const totalCartera = parseFloat(totalResult.totalCartera) || 0;
+    console.log('Total cartera calculated:', totalCartera);
+
+    // Aplicar paginación y ordenamiento
     const page = filters.page || 1;
     const limit = filters.limit || 10;
+    
+    console.log('Applying pagination:', { page, limit });
+    
     queryBuilder
       .orderBy('ips.nombre', 'ASC')
+      .addOrderBy('periodo.year', 'DESC')
+      .addOrderBy('periodo.mes', 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
 
+    // Ejecutar consulta principal
     const data = await queryBuilder.getMany();
+    console.log('Data retrieved:', data.length, 'records');
 
-    return { data, total, totalCartera };
+    return { 
+      data, 
+      total, 
+      totalCartera 
+    };
+
+  } catch (error) {
+    console.error('❌ CarteraService: Error in getCarteraData:', error);
+    throw new BadRequestException(`Error al obtener datos de cartera: ${error.message}`);
   }
+}
 
   async createCarteraData(createDto: CreateCarteraDataDto): Promise<CarteraData> {
     // Verificar que EPS, IPS y Período existan

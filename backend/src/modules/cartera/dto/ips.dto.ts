@@ -1,6 +1,6 @@
 // backend/src/modules/cartera/dto/ips.dto.ts
 import { IsString, IsOptional, IsBoolean, IsNumber } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 
 export class CreateIPSDto {
   @IsString()
@@ -84,9 +84,14 @@ export class IPSFilterDto {
 
   @IsOptional()
   @Transform(({ value }) => {
-    if (value === 'true') return true;
-    if (value === 'false') return false;
-    return value;
+    if (value === undefined || value === null || value === '') return undefined;
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'string') {
+      const lowerValue = value.toLowerCase();
+      if (lowerValue === 'true') return true;
+      if (lowerValue === 'false') return false;
+    }
+    return undefined;
   })
   @IsBoolean()
   soloActivas?: boolean;
@@ -101,9 +106,14 @@ export class IPSFilterDto {
 
   @IsOptional()
   @Transform(({ value }) => {
-    if (value === 'true') return true;
-    if (value === 'false') return false;
-    return value;
+    if (value === undefined || value === null || value === '') return undefined;
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'string') {
+      const lowerValue = value.toLowerCase();
+      if (lowerValue === 'true') return true;
+      if (lowerValue === 'false') return false;
+    }
+    return undefined;
   })
   @IsBoolean()
   sinAsignar?: boolean;
@@ -117,12 +127,28 @@ export class IPSFilterDto {
   orderDirection?: 'ASC' | 'DESC';
 
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }) => {
+    if (value === undefined || value === null || value === '') return undefined;
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string') {
+      const parsed = parseInt(value, 10);
+      return isNaN(parsed) ? undefined : parsed;
+    }
+    return undefined;
+  })
   @IsNumber()
   page?: number;
 
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
+  @Transform(({ value }) => {
+    if (value === undefined || value === null || value === '') return undefined;
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string') {
+      const parsed = parseInt(value, 10);
+      return isNaN(parsed) ? undefined : parsed;
+    }
+    return undefined;
+  })
   @IsNumber()
   limit?: number;
 }

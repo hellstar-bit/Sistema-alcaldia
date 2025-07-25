@@ -19,59 +19,85 @@ export class IPSService {
     limit: number;
     totalPages: number;
   }> {
-    const queryBuilder = this.ipsRepository
-      .createQueryBuilder('ips')
-      .leftJoinAndSelect('ips.eps', 'eps');
+    console.log('🏥 IPSService: getAllIPS - Filters received:', filters);
 
-    // Filtros
-    if (filters.search) {
-      queryBuilder.andWhere(
-        '(ips.nombre ILIKE :search OR ips.codigo ILIKE :search)',
-        { search: `%${filters.search}%` }
-      );
-    }
+    try {
+      const queryBuilder = this.ipsRepository
+        .createQueryBuilder('ips')
+        .leftJoinAndSelect('ips.eps', 'eps');
 
-    if (filters.soloActivas !== undefined) {
-      queryBuilder.andWhere('ips.activa = :activa', { activa: filters.soloActivas });
-    }
+      // Filtros
+      if (filters.search) {
+        console.log('Applying search filter:', filters.search);
+        queryBuilder.andWhere(
+          '(ips.nombre ILIKE :search OR ips.codigo ILIKE :search)',
+          { search: `%${filters.search}%` }
+        );
+      }
 
-    if (filters.tipoServicio) {
-      queryBuilder.andWhere('ips.tipoServicio = :tipoServicio', { 
-        tipoServicio: filters.tipoServicio 
+      if (filters.soloActivas !== undefined) {
+        console.log('Applying soloActivas filter:', filters.soloActivas);
+        queryBuilder.andWhere('ips.activa = :activa', { activa: filters.soloActivas });
+      }
+
+      if (filters.tipoServicio) {
+        console.log('Applying tipoServicio filter:', filters.tipoServicio);
+        queryBuilder.andWhere('ips.tipoServicio = :tipoServicio', { 
+          tipoServicio: filters.tipoServicio 
+        });
+      }
+
+      if (filters.epsId) {
+        console.log('Applying epsId filter:', filters.epsId);
+        queryBuilder.andWhere('eps.id = :epsId', { epsId: filters.epsId });
+      }
+
+      if (filters.sinAsignar !== undefined && filters.sinAsignar === true) {
+        console.log('Applying sinAsignar filter:', filters.sinAsignar);
+        queryBuilder.andWhere('eps.id IS NULL');
+      }
+
+      // Ordenamiento
+      const orderBy = filters.orderBy || 'nombre';
+      const orderDirection = filters.orderDirection || 'ASC';
+      console.log('Applying order:', orderBy, orderDirection);
+      queryBuilder.orderBy(`ips.${orderBy}`, orderDirection);
+
+      // Contar total antes de aplicar paginación
+      const total = await queryBuilder.getCount();
+      console.log('Total count before pagination:', total);
+
+      // Paginación
+      const page = filters.page || 1;
+      const limit = Math.min(filters.limit || 10, 10000); // Máximo 10000 registros
+      
+      console.log('Applying pagination:', { page, limit });
+      queryBuilder
+        .skip((page - 1) * limit)
+        .take(limit);
+
+      const data = await queryBuilder.getMany();
+      const totalPages = Math.ceil(total / limit);
+
+      console.log('IPSService result:', {
+        dataCount: data.length,
+        total,
+        page,
+        limit,
+        totalPages
       });
+
+      return {
+        data,
+        total,
+        page,
+        limit,
+        totalPages
+      };
+    } catch (error) {
+      console.error('❌ IPSService: Error in getAllIPS:', error);
+      throw new BadRequestException(`Error al obtener IPS: ${error.message}`);
     }
-
-    if (filters.epsId) {
-      queryBuilder.andWhere('eps.id = :epsId', { epsId: filters.epsId });
-    }
-
-    if (filters.sinAsignar) {
-      queryBuilder.andWhere('eps.id IS NULL');
-    }
-
-    // Ordenamiento
-    const orderBy = filters.orderBy || 'nombre';
-    const orderDirection = filters.orderDirection || 'ASC';
-    queryBuilder.orderBy(`ips.${orderBy}`, orderDirection);
-
-    // Paginación
-    const page = filters.page || 1;
-    const limit = filters.limit || 10;
-    const total = await queryBuilder.getCount();
-    
-    queryBuilder
-      .skip((page - 1) * limit)
-      .take(limit);
-
-    const data = await queryBuilder.getMany();
-
-    return {
-      data,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit)
-    };
   }
 
   async getIPSById(id: string): Promise<IPS> {
@@ -114,7 +140,8 @@ export class IPSService {
 
     const ips = this.ipsRepository.create({
       ...createDto,
-      codigo
+      codigo,
+      activa: createDto.activa ?? true
     });
 
     return await this.ipsRepository.save(ips);
@@ -123,48 +150,44 @@ export class IPSService {
   async updateIPS(id: string, updateDto: UpdateIPSDto): Promise<IPS> {
     const ips = await this.getIPSById(id);
 
-    // Verificar conflictos de nombre (si se está cambiando)
+    // Verificar nombre único (excluyendo la IPS actual)
     if (updateDto.nombre && updateDto.nombre !== ips.nombre) {
       const existingByName = await this.ipsRepository.findOne({
         where: { nombre: updateDto.nombre }
       });
 
-      if (existingByName) {
+      if (existingByName && existingByName.id !== id) {
         throw new ConflictException(`Ya existe una IPS con el nombre "${updateDto.nombre}"`);
       }
     }
 
-    // Verificar conflictos de código (si se está cambiando)
+    // Verificar código único (excluyendo la IPS actual)
     if (updateDto.codigo && updateDto.codigo !== ips.codigo) {
       const existingByCode = await this.ipsRepository.findOne({
         where: { codigo: updateDto.codigo }
       });
 
-      if (existingByCode) {
+      if (existingByCode && existingByCode.id !== id) {
         throw new ConflictException(`Ya existe una IPS con el código "${updateDto.codigo}"`);
       }
     }
 
+    // Actualizar campos
     Object.assign(ips, updateDto);
     return await this.ipsRepository.save(ips);
   }
 
   async deleteIPS(id: string): Promise<void> {
     const ips = await this.getIPSById(id);
+    
+    // Verificar si la IPS tiene EPS asignadas
+    const ipsWithEPS = await this.ipsRepository.findOne({
+      where: { id },
+      relations: ['eps']
+    });
 
-    // Verificar si tiene datos de cartera asociados
-    const hasCarteraData = await this.ipsRepository
-      .createQueryBuilder('ips')
-      .leftJoin('ips.carteraData', 'cartera')
-      .where('ips.id = :id', { id })
-      .andWhere('cartera.id IS NOT NULL')
-      .getCount();
-
-    if (hasCarteraData > 0) {
-      throw new BadRequestException(
-        'No se puede eliminar la IPS porque tiene datos de cartera asociados. ' +
-        'Primero elimina los datos de cartera o desactiva la IPS.'
-      );
+    if (ipsWithEPS?.eps && ipsWithEPS.eps.length > 0) {
+      throw new ConflictException('No se puede eliminar la IPS porque tiene EPS asignadas');
     }
 
     await this.ipsRepository.remove(ips);
@@ -174,14 +197,6 @@ export class IPSService {
     const ips = await this.getIPSById(id);
     ips.activa = !ips.activa;
     return await this.ipsRepository.save(ips);
-  }
-
-  async getIPSByEPS(epsId: string): Promise<IPS[]> {
-    return await this.ipsRepository
-      .createQueryBuilder('ips')
-      .leftJoin('ips.eps', 'eps')
-      .where('eps.id = :epsId', { epsId })
-      .getMany();
   }
 
   async getUnassignedIPS(): Promise<IPS[]> {
@@ -194,7 +209,6 @@ export class IPSService {
       .getMany();
   }
 
-  // Método para encontrar o crear IPS (para compatibilidad con sistema existente)
   async findOrCreateIPS(nombre: string, codigo?: string): Promise<IPS> {
     let ips = await this.ipsRepository.findOne({
       where: { nombre }

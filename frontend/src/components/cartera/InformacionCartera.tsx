@@ -1,4 +1,4 @@
-// frontend/src/components/cartera/InformacionCartera.tsx - VERSIÓN CORREGIDA
+// frontend/src/components/cartera/InformacionCartera.tsx - VERSIÓN COMPLETAMENTE CORREGIDA
 import React, { useState, useEffect } from 'react';
 import {
   BuildingOfficeIcon,
@@ -46,7 +46,7 @@ const MESES_ANIO = [
 ];
 
 const InformacionCartera: React.FC = () => {
-  // Estado principal
+  // Estados principales
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [epsList, setEpsList] = useState<EPS[]>([]);
   const [periodosList, setPeriodosList] = useState<Periodo[]>([]);
@@ -64,13 +64,15 @@ const InformacionCartera: React.FC = () => {
   const [itemsPerPage] = useState(10);
   const [showUploadModal, setShowUploadModal] = useState(false);
 
-  // Sweet Alert
+  // Hook de Sweet Alert
   const { showSuccess, showError, showLoading, close } = useSweetAlert();
 
   // Cargar datos iniciales
   useEffect(() => {
     loadInitialData();
   }, []);
+
+  // *** FUNCIONES PRINCIPALES ***
 
   const loadInitialData = async () => {
     try {
@@ -83,26 +85,39 @@ const InformacionCartera: React.FC = () => {
         carteraAPI.getEPSPeriodoStatus()
       ]);
 
-      if (epsResponse.success) {
+      // Verificar respuestas y inicializar arrays vacíos si fallan
+      if (epsResponse.success && Array.isArray(epsResponse.data)) {
         setEpsList(epsResponse.data);
       } else {
+        console.warn('EPS response failed or invalid:', epsResponse);
+        setEpsList([]);
         showError({ title: 'Error', text: 'No se pudieron cargar las EPS' });
       }
 
-      if (periodosResponse.success) {
+      if (periodosResponse.success && Array.isArray(periodosResponse.data)) {
         setPeriodosList(periodosResponse.data);
       } else {
+        console.warn('Periodos response failed or invalid:', periodosResponse);
+        setPeriodosList([]);
         showError({ title: 'Error', text: 'No se pudieron cargar los períodos' });
       }
 
-      if (statusResponse.success) {
+      if (statusResponse.success && Array.isArray(statusResponse.data)) {
         setEpsPeriodoStatus(statusResponse.data);
       } else {
+        console.warn('Status response failed or invalid:', statusResponse);
+        setEpsPeriodoStatus([]);
         showError({ title: 'Error', text: 'No se pudo cargar el estado de los datos' });
       }
 
     } catch (error: any) {
       console.error('Error loading initial data:', error);
+      // Asegurar que todos los estados se inicialicen como arrays
+      setEpsList([]);
+      setPeriodosList([]);
+      setEpsPeriodoStatus([]);
+      setCarteraData([]);
+      
       showError({ 
         title: 'Error de conexión', 
         text: 'No se pudo conectar con el servidor' 
@@ -112,44 +127,65 @@ const InformacionCartera: React.FC = () => {
     }
   };
 
+  const loadCarteraData = async (epsId?: string, periodoId?: string) => {
+    // Usar parámetros si se proporcionan, sino usar el estado
+    const finalEpsId = epsId || selectedEPS?.id;
+    const finalPeriodoId = periodoId || selectedPeriodo?.id;
+    
+    if (!finalEpsId || !finalPeriodoId) {
+      setCarteraData([]);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      const response = await carteraAPI.getCarteraData({
+        epsId: finalEpsId,
+        periodoId: finalPeriodoId,
+        limit: 1000 // Cargar todos los datos para esta combinación
+      });
+
+      if (response.success && response.data) {
+        // Verificar si response.data es un array o tiene una propiedad data
+        const dataArray = Array.isArray(response.data) ? response.data : response.data.data;
+        setCarteraData(Array.isArray(dataArray) ? dataArray : []);
+      } else {
+        console.warn('Cartera data response failed or invalid:', response);
+        setCarteraData([]);
+        showError({ 
+          title: 'Error', 
+          text: response.message || 'No se pudieron cargar los datos de cartera' 
+        });
+      }
+    } catch (error: any) {
+      console.error('Error loading cartera data:', error);
+      setCarteraData([]);
+      showError({ 
+        title: 'Error', 
+        text: 'Error al cargar los datos de cartera' 
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // *** FUNCIONES DE UTILIDAD ***
+
   const findPeriodoByYearAndMonth = (year: number, mes: number): Periodo | null => {
-  return periodosList.find(p => p.year === year && p.mes === mes) || null;
-};
+    return periodosList.find(p => p.year === year && p.mes === mes) || null;
+  };
 
-// Función para verificar si hay datos para un EPS, año y mes específicos
-const hasDataForEPSYearMonth = (epsId: string, year: number, mes: number): boolean => {
-  const periodo = findPeriodoByYearAndMonth(year, mes);
-  if (!periodo) return false;
-  return carteraUtils.hasDataForPeriod(epsPeriosoStatus, epsId, periodo.id);
-};
+  const hasDataForEPSYearMonth = (epsId: string, year: number, mes: number): boolean => {
+    const periodo = findPeriodoByYearAndMonth(year, mes);
+    if (!periodo) return false;
+    return carteraUtils.hasDataForPeriod(epsPeriosoStatus, epsId, periodo.id);
+  };
 
-// Función para obtener años disponibles
-const getAvailableYears = (): number[] => {
-  const years = Array.from(new Set(periodosList.map(p => p.year))).sort((a, b) => b - a);
-  return years.length > 0 ? years : [new Date().getFullYear()];
-};
-
-const handleYearChange = (year: number) => {
-  setSelectedYear(year);
-  setSelectedPeriodo(null);
-  setCarteraData([]);
-};
-
-const handleMonthSelect = async (mes: number) => {
-  if (!selectedEPS) return;
-  
-  const periodo = findPeriodoByYearAndMonth(selectedYear, mes);
-  if (!periodo) {
-    showError({
-      title: 'Período no disponible',
-      text: `No existe el período ${MESES_ANIO[mes - 1].nombre} ${selectedYear} en el sistema`
-    });
-    return;
-  }
-  
-  setSelectedPeriodo(periodo);
-  await loadCarteraData(selectedEPS.id, periodo.id);
-};
+  const getAvailableYears = (): number[] => {
+    const years = Array.from(new Set(periodosList.map(p => p.year))).sort((a, b) => b - a);
+    return years.length > 0 ? years : [new Date().getFullYear()];
+  };
 
   const hasDataForPeriod = (epsId: string, periodoId: string): boolean => {
     return carteraUtils.hasDataForPeriod(epsPeriosoStatus, epsId, periodoId);
@@ -157,6 +193,14 @@ const handleMonthSelect = async (mes: number) => {
 
   const getAvailablePeriodsForEPS = (epsId: string): Periodo[] => {
     return carteraUtils.getAvailablePeriodsForEPS(periodosList, epsPeriosoStatus, epsId);
+  };
+
+  // *** MANEJADORES DE EVENTOS ***
+
+  const handleYearChange = (year: number) => {
+    setSelectedYear(year);
+    setSelectedPeriodo(null);
+    setCarteraData([]);
   };
 
   const handleEPSSelect = (eps: EPS) => {
@@ -173,32 +217,56 @@ const handleMonthSelect = async (mes: number) => {
     await loadCarteraData(selectedEPS.id, periodo.id);
   };
 
-  const loadCarteraData = async (epsId: string, periodoId: string) => {
-    try {
-      setLoading(true);
-      
-      const response = await carteraAPI.getCarteraData({
-        epsId,
-        periodoId,
-        limit: 1000 // Cargar todos los datos para esta combinación
+  const handleMonthSelect = async (mes: number) => {
+    if (!selectedEPS) return;
+    
+    const periodo = findPeriodoByYearAndMonth(selectedYear, mes);
+    if (!periodo) {
+      showError({
+        title: 'Período no disponible',
+        text: `No existe el período ${MESES_ANIO[mes - 1].nombre} ${selectedYear} en el sistema`
       });
+      return;
+    }
+    
+    setSelectedPeriodo(periodo);
+    await loadCarteraData(selectedEPS.id, periodo.id);
+  };
 
-      if (response.success) {
-        setCarteraData(response.data.data);
-      } else {
-        showError({ 
-          title: 'Error', 
-          text: 'No se pudieron cargar los datos de cartera' 
-        });
+  const handleUploadSuccess = async () => {
+    setShowUploadModal(false);
+    
+    // Recargar datos solo si tenemos las selecciones necesarias
+    if (selectedEPS && selectedPeriodo) {
+      await Promise.all([
+        loadCarteraData(selectedEPS.id, selectedPeriodo.id),
+        carteraAPI.getEPSPeriodoStatus().then(response => {
+          if (response.success && Array.isArray(response.data)) {
+            setEpsPeriodoStatus(response.data);
+          }
+        })
+      ]);
+    }
+  };
+
+  const handleRefreshData = async () => {
+    showLoading('Actualizando datos...', 'Recargando información');
+    try {
+      await loadInitialData();
+      if (selectedEPS && selectedPeriodo) {
+        await loadCarteraData(selectedEPS.id, selectedPeriodo.id);
       }
-    } catch (error: any) {
-      console.error('Error loading cartera data:', error);
-      showError({ 
-        title: 'Error', 
-        text: 'Error al cargar los datos de cartera' 
+      close();
+      showSuccess('Datos actualizados', {
+        title: '¡Actualización completada!',
+        text: 'Todos los datos han sido recargados'
       });
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      close();
+      showError({
+        title: 'Error al actualizar',
+        text: 'No se pudieron actualizar los datos'
+      });
     }
   };
 
@@ -257,44 +325,11 @@ const handleMonthSelect = async (mes: number) => {
     }
   };
 
-  const handleUploadSuccess = async () => {
-    setShowUploadModal(false);
-    
-    // Recargar datos
-    await Promise.all([
-      loadCarteraData(selectedEPS!.id, selectedPeriodo!.id),
-      carteraAPI.getEPSPeriodoStatus().then(response => {
-        if (response.success) {
-          setEpsPeriodoStatus(response.data);
-        }
-      })
-    ]);
-  };
+  // *** DATOS CALCULADOS ***
 
-  const handleRefreshData = async () => {
-    showLoading('Actualizando datos...', 'Recargando información');
-    try {
-      await loadInitialData();
-      if (selectedEPS && selectedPeriodo) {
-        await loadCarteraData(selectedEPS.id, selectedPeriodo.id);
-      }
-      close();
-      showSuccess('Datos actualizados', {
-        title: '¡Actualización completada!',
-        text: 'Todos los datos han sido recargados'
-      });
-    } catch (error) {
-      close();
-      showError({
-        title: 'Error al actualizar',
-        text: 'No se pudieron actualizar los datos'
-      });
-    }
-  };
-
-  const filteredCarteraData = carteraData.filter(item =>
-    item.ips.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.ips.codigo.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredCarteraData = (carteraData || []).filter(item =>
+    item?.ips?.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item?.ips?.codigo?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const paginatedData = filteredCarteraData.slice(
@@ -303,6 +338,18 @@ const handleMonthSelect = async (mes: number) => {
   );
 
   const totalPages = Math.ceil(filteredCarteraData.length / itemsPerPage);
+
+  // *** USEEFFECT PARA CARGAR DATOS DE CARTERA ***
+  useEffect(() => {
+    // Solo cargar datos de cartera si tenemos EPS y período seleccionados
+    if (selectedEPS && selectedPeriodo) {
+      loadCarteraData(selectedEPS.id, selectedPeriodo.id);
+    } else {
+      setCarteraData([]); // Limpiar datos si no hay selección
+    }
+  }, [selectedEPS, selectedPeriodo]);
+
+  // *** RENDERIZADO ***
 
   // Loading inicial
   if (initialLoading) {
@@ -333,72 +380,42 @@ const handleMonthSelect = async (mes: number) => {
               <CurrencyDollarIcon className="w-8 h-8 text-yellow-300" />
               <h1 className="text-2xl lg:text-3xl font-bold">Información Cartera</h1>
             </div>
-            <p className="text-primary-100 text-base">
-              Control y gestión de cartera por EPS e IPS - Sector Salud
+            <p className="text-primary-100 text-lg">
+              Sistema de gestión y análisis de cartera por EPS e IPS
             </p>
-            <div className="flex items-center space-x-4 mt-4 text-sm text-primary-200">
-              <span className="flex items-center space-x-2">
-                <BuildingOfficeIcon className="w-4 h-4" />
-                <span>{epsList.length} EPS registradas</span>
-              </span>
-              <span className="flex items-center space-x-2">
-                <CalendarDaysIcon className="w-4 h-4" />
-                <span>Año{selectedYear}</span>
-              </span>
-            </div>
-          </div>
-
-          {/* Selector de Año */}
-          <div className="card p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <CalendarDaysIcon className="w-6 h-6 text-primary-600" />
-                <h3 className="text-lg font-semibold text-primary-900">Año de Consulta</h3>
-              </div>
-              <div className="flex items-center space-x-2">
-                <select
-                  value={selectedYear}
-                  onChange={(e) => handleYearChange(parseInt(e.target.value))}
-                  className="bg-white border border-gray-300 rounded-lg px-4 py-2 text-sm font-medium text-primary-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                >
-                  {getAvailableYears().map(year => (
-                    <option key={year} value={year}>{year}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
           </div>
           
-          {/* Botones de Acción Principales */}
-          <div className="hidden lg:flex items-center space-x-3">
+          <div className="hidden lg:flex items-center space-x-4">
+            <button 
+              onClick={handleRefreshData}
+              className="btn-secondary"
+              disabled={loading}
+            >
+              <ArrowPathIcon className={`w-5 h-5 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Actualizar
+            </button>
             <button 
               onClick={() => setShowUploadModal(true)}
               disabled={!selectedEPS || !selectedPeriodo}
-              className="flex items-center space-x-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-lg transition-all duration-200 backdrop-blur-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-primary"
             >
-              <CloudArrowUpIcon className="w-5 h-5" />
-              <span>Cargar Información</span>
+              <CloudArrowUpIcon className="w-5 h-5 mr-2" />
+              Cargar Excel
             </button>
             <button 
               onClick={handleDownloadTemplate}
-              className="flex items-center space-x-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-lg transition-all duration-200 backdrop-blur-sm"
+              className="btn-accent"
             >
-              <DocumentArrowDownIcon className="w-5 h-5" />
-              <span>Descargar Plantilla</span>
+              <DocumentArrowDownIcon className="w-5 h-5 mr-2" />
+              Plantilla
             </button>
             <button 
               onClick={handleExportExcel}
               disabled={!selectedEPS || !selectedPeriodo || carteraData.length === 0}
-              className="flex items-center space-x-2 bg-success-600 hover:bg-success-700 text-white px-4 py-2 rounded-lg transition-all duration-200 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-success"
             >
-              <ArrowDownTrayIcon className="w-5 h-5" />
-              <span>Exportar Excel</span>
-            </button>
-            <button 
-              onClick={handleRefreshData}
-              className="flex items-center space-x-2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-2 py-2 rounded-lg transition-all duration-200 backdrop-blur-sm"
-            >
-              <ArrowPathIcon className="w-5 h-5" />
+              <ArrowDownTrayIcon className="w-5 h-5 mr-2" />
+              Exportar
             </button>
           </div>
         </div>
@@ -859,7 +876,7 @@ const handleMonthSelect = async (mes: number) => {
         </button>
       </div>
 
-      {/* Modal de Upload */}
+    
       <ExcelUploadModal
         isOpen={showUploadModal}
         onClose={() => setShowUploadModal(false)}
