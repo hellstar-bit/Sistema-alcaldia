@@ -1,4 +1,4 @@
-// frontend/src/contexts/AuthContext.tsx
+// frontend/src/contexts/AuthContext.tsx - CON DEBUG MEJORADO
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 interface User {
@@ -46,6 +46,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     const storedUser = localStorage.getItem('user');
     const storedToken = localStorage.getItem('token');
+    
+    console.log('📊 AuthProvider: Estado localStorage:', {
+      hasUser: !!storedUser,
+      hasToken: !!storedToken,
+      userPreview: storedUser ? JSON.parse(storedUser).name : 'N/A',
+      tokenPreview: storedToken ? storedToken.substring(0, 20) + '...' : 'N/A'
+    });
     
     if (storedUser && storedToken) {
       try {
@@ -99,6 +106,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         setUser(userData);
         console.log('✅ AuthProvider: Login exitoso:', userData);
+        console.log('🎟️ AuthProvider: Token generado:', token);
       } else {
         throw new Error('Credenciales inválidas');
       }
@@ -136,7 +144,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   console.log('🔄 AuthProvider: Estado actual:', {
     isAuthenticated: !!user,
     isLoading,
-    userName: user?.name || 'No user'
+    userName: user?.name || 'No user',
+    hasToken: !!localStorage.getItem('token')
   });
 
   return (

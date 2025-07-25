@@ -1,5 +1,6 @@
-// frontend/src/components/layout/Sidebar.tsx
+// frontend/src/components/layout/Sidebar.tsx - VERSIÓN CON NAVEGACIÓN REAL
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   HomeIcon,
   DocumentArrowUpIcon,
@@ -54,7 +55,7 @@ const menuItems: MenuItem[] = [
         label: 'Información Cartera',
         icon: CreditCardIcon,
         href: '/carga/cartera',
-        badge: 'Activo'
+        badge: 'Nuevo'
       },
       {
         id: 'info-flujo',
@@ -297,7 +298,8 @@ const MenuItemComponent: React.FC<{
 };
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, isCollapsed, onCollapseToggle }) => {
-  const [currentPath, setCurrentPath] = useState('/dashboard');
+  const navigate = useNavigate();
+  const location = useLocation();
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
 
   // Auto-expandir elementos activos
@@ -317,15 +319,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, isCollapsed,
       return [];
     };
 
-    const activeParents = findActiveParents(menuItems, currentPath);
+    const activeParents = findActiveParents(menuItems, location.pathname);
     if (activeParents.length > 0) {
       setExpandedItems(new Set(activeParents));
     }
-  }, [currentPath]);
+  }, [location.pathname]);
 
   const handleItemClick = (item: MenuItem) => {
     if (item.href) {
-      setCurrentPath(item.href);
+      navigate(item.href);
       console.log('Navigating to:', item.href);
       if (window.innerWidth < 1024) {
         onToggle();
@@ -365,8 +367,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, isCollapsed,
             </div>
           )}
           
-          {/* Cuando está colapsado, no mostramos ningún icono, solo el espacio vacío */}
-          
           {/* Botón de colapsar para desktop */}
           <button
             onClick={onCollapseToggle}
@@ -392,7 +392,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, isCollapsed,
                 key={item.id}
                 item={item}
                 level={0}
-                currentPath={currentPath}
+                currentPath={location.pathname}
                 onItemClick={handleItemClick}
                 isCollapsed={isCollapsed}
                 expandedItems={expandedItems}
@@ -402,7 +402,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, isCollapsed,
           </div>
         </nav>
 
-        {/* Secciones inferiores - Solo visible cuando no está colapsado */}
+        {/* Resto del sidebar (información del usuario, estadísticas, etc.) */}
         {!isCollapsed && (
           <>
             {/* Información del Usuario */}
@@ -463,15 +463,24 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, isCollapsed,
             <div className="px-4 py-3 border-t border-gray-100 flex-shrink-0">
               <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Accesos Rápidos</h4>
               <div className="grid grid-cols-2 gap-2">
-                <button className="flex flex-col items-center p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                <button 
+                  onClick={() => navigate('/carga/cartera')}
+                  className="flex flex-col items-center p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                >
                   <DocumentArrowUpIcon className="w-4 h-4 text-primary-600 mb-1" />
                   <span className="text-xs text-gray-600">Cargar</span>
                 </button>
-                <button className="flex flex-col items-center p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                <button 
+                  onClick={() => navigate('/reportes/mensuales')}
+                  className="flex flex-col items-center p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                >
                   <ChartBarIcon className="w-4 h-4 text-primary-600 mb-1" />
                   <span className="text-xs text-gray-600">Reportes</span>
                 </button>
-                <button className="flex flex-col items-center p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                <button 
+                  onClick={() => navigate('/config/parametros')}
+                  className="flex flex-col items-center p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                >
                   <CogIcon className="w-4 h-4 text-primary-600 mb-1" />
                   <span className="text-xs text-gray-600">Config</span>
                 </button>
