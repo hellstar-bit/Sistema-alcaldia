@@ -127,48 +127,145 @@ const InformacionCartera: React.FC = () => {
     }
   };
 
-  const loadCarteraData = async (epsId?: string, periodoId?: string) => {
-    // Usar parámetros si se proporcionan, sino usar el estado
-    const finalEpsId = epsId || selectedEPS?.id;
-    const finalPeriodoId = periodoId || selectedPeriodo?.id;
+  const updateLocalEPSPeriodoStatus = (epsId: string, periodoId: string, hasData: boolean) => {
+  setEpsPeriodoStatus(prevStatus => {
+    // Buscar si ya existe un registro para esta combinación
+    const existingIndex = prevStatus.findIndex(
+      item => item.epsId === epsId && item.periodoId === periodoId
+    );
     
-    if (!finalEpsId || !finalPeriodoId) {
-      setCarteraData([]);
-      return;
+    if (existingIndex >= 0) {
+      // Actualizar el registro existente
+      const updatedStatus = [...prevStatus];
+      updatedStatus[existingIndex] = {
+        ...updatedStatus[existingIndex],
+        tieneData: hasData,
+        totalRegistros: hasData ? (updatedStatus[existingIndex].totalRegistros || 1) : 0
+      };
+      return updatedStatus;
+    } else if (hasData) {
+      // Agregar un nuevo registro si tiene datos
+      return [...prevStatus, {
+        epsId,
+        periodoId,
+        tieneData: true,
+        totalRegistros: 1,
+        totalCartera: 0
+      }];
     }
+    
+    return prevStatus;
+  });
+};
 
-    try {
-      setLoading(true);
+
+  const updateEPSPeriodoStatus = async () => {
+  try {
+    const statusResponse = await carteraAPI.getEPSPeriodoStatus();
+    if (statusResponse.success && Array.isArray(statusResponse.data)) {
+      setEpsPeriodoStatus(statusResponse.data);
+    }
+  } catch (error) {
+    console.error('Error updating EPS periodo status:', error);
+  }
+};
+
+  const loadCarteraDataOptimized = async (epsId?: string, periodoId?: string) => {
+  const finalEpsId = epsId || selectedEPS?.id;
+  const finalPeriodoId = periodoId || selectedPeriodo?.id;
+  
+  if (!finalEpsId || !finalPeriodoId) {
+    setCarteraData([]);
+    return;
+  }
+
+  try {
+    setLoading(true);
+    
+    const response = await carteraAPI.getCarteraData({
+      epsId: finalEpsId,
+      periodoId: finalPeriodoId,
+      limit: 1000
+    });
+
+    if (response.success && response.data) {
+      const dataArray = Array.isArray(response.data) ? response.data : response.data.data;
+      setCarteraData(Array.isArray(dataArray) ? dataArray : []);
       
-      const response = await carteraAPI.getCarteraData({
-        epsId: finalEpsId,
-        periodoId: finalPeriodoId,
-        limit: 1000 // Cargar todos los datos para esta combinación
-      });
-
-      if (response.success && response.data) {
-        // Verificar si response.data es un array o tiene una propiedad data
-        const dataArray = Array.isArray(response.data) ? response.data : response.data.data;
-        setCarteraData(Array.isArray(dataArray) ? dataArray : []);
-      } else {
-        console.warn('Cartera data response failed or invalid:', response);
-        setCarteraData([]);
-        showError({ 
-          title: 'Error', 
-          text: response.message || 'No se pudieron cargar los datos de cartera' 
-        });
+      // *** ACTUALIZACIÓN LOCAL INMEDIATA (más rápida) ***
+      if (Array.isArray(dataArray)) {
+        updateLocalEPSPeriodoStatus(finalEpsId, finalPeriodoId, dataArray.length > 0);
       }
-    } catch (error: any) {
-      console.error('Error loading cartera data:', error);
+    } else {
+      console.warn('Cartera data response failed or invalid:', response);
+      setCarteraData([]);
+      updateLocalEPSPeriodoStatus(finalEpsId, finalPeriodoId, false);
+      showError({ 
+        title: 'Error', 
+        text: response.message || 'No se pudieron cargar los datos de cartera' 
+      });
+    }
+  } catch (error: any) {
+    console.error('Error loading cartera data:', error);
+    setCarteraData([]);
+    updateLocalEPSPeriodoStatus(finalEpsId, finalPeriodoId, false);
+    showError({ 
+      title: 'Error', 
+      text: 'Error al cargar los datos de cartera' 
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+
+  const loadCarteraData = async (epsId?: string, periodoId?: string) => {
+  // Usar parámetros si se proporcionan, sino usar el estado
+  const finalEpsId = epsId || selectedEPS?.id;
+  const finalPeriodoId = periodoId || selectedPeriodo?.id;
+  
+  if (!finalEpsId || !finalPeriodoId) {
+    setCarteraData([]);
+    return;
+  }
+
+  try {
+    setLoading(true);
+    
+    const response = await carteraAPI.getCarteraData({
+      epsId: finalEpsId,
+      periodoId: finalPeriodoId,
+      limit: 1000
+    });
+
+    if (response.success && response.data) {
+      const dataArray = Array.isArray(response.data) ? response.data : response.data.data;
+      setCarteraData(Array.isArray(dataArray) ? dataArray : []);
+      
+      // *** NUEVO: Actualizar el estado después de cargar datos exitosamente ***
+      if (Array.isArray(dataArray) && dataArray.length > 0) {
+        await updateEPSPeriodoStatus();
+      }
+    } else {
+      console.warn('Cartera data response failed or invalid:', response);
       setCarteraData([]);
       showError({ 
         title: 'Error', 
-        text: 'Error al cargar los datos de cartera' 
+        text: response.message || 'No se pudieron cargar los datos de cartera' 
       });
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch (error: any) {
+    console.error('Error loading cartera data:', error);
+    setCarteraData([]);
+    showError({ 
+      title: 'Error', 
+      text: 'Error al cargar los datos de cartera' 
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+
+
 
   // *** FUNCIONES DE UTILIDAD ***
 
@@ -211,64 +308,58 @@ const InformacionCartera: React.FC = () => {
   };
 
   const handlePeriodoSelect = async (periodo: Periodo) => {
-    if (!selectedEPS) return;
-    
-    setSelectedPeriodo(periodo);
-    await loadCarteraData(selectedEPS.id, periodo.id);
-  };
+  if (!selectedEPS) return;
+  
+  setSelectedPeriodo(periodo);
+  await loadCarteraData(selectedEPS.id, periodo.id);
+};
 
   const handleMonthSelect = async (mes: number) => {
-    if (!selectedEPS) return;
-    
-    const periodo = findPeriodoByYearAndMonth(selectedYear, mes);
-    if (!periodo) {
-      showError({
-        title: 'Período no disponible',
-        text: `No existe el período ${MESES_ANIO[mes - 1].nombre} ${selectedYear} en el sistema`
-      });
-      return;
-    }
-    
-    setSelectedPeriodo(periodo);
-    await loadCarteraData(selectedEPS.id, periodo.id);
-  };
+  if (!selectedEPS) return;
+  
+  const periodo = findPeriodoByYearAndMonth(selectedYear, mes);
+  if (!periodo) {
+    showError({
+      title: 'Período no disponible',
+      text: `No existe el período ${MESES_ANIO[mes - 1].nombre} ${selectedYear} en el sistema`
+    });
+    return;
+  }
+  
+  setSelectedPeriodo(periodo);
+  await loadCarteraData(selectedEPS.id, periodo.id);
+};
 
   const handleUploadSuccess = async () => {
-    setShowUploadModal(false);
-    
-    // Recargar datos solo si tenemos las selecciones necesarias
-    if (selectedEPS && selectedPeriodo) {
-      await Promise.all([
-        loadCarteraData(selectedEPS.id, selectedPeriodo.id),
-        carteraAPI.getEPSPeriodoStatus().then(response => {
-          if (response.success && Array.isArray(response.data)) {
-            setEpsPeriodoStatus(response.data);
-          }
-        })
-      ]);
-    }
-  };
+  setShowUploadModal(false);
+  
+  // Recargar datos y actualizar estado
+  if (selectedEPS && selectedPeriodo) {
+    await loadCarteraData(selectedEPS.id, selectedPeriodo.id);
+    // El loadCarteraData ya actualiza el estado, no necesitamos hacerlo aquí
+  }
+};
 
   const handleRefreshData = async () => {
-    showLoading('Actualizando datos...', 'Recargando información');
-    try {
-      await loadInitialData();
-      if (selectedEPS && selectedPeriodo) {
-        await loadCarteraData(selectedEPS.id, selectedPeriodo.id);
-      }
-      close();
-      showSuccess('Datos actualizados', {
-        title: '¡Actualización completada!',
-        text: 'Todos los datos han sido recargados'
-      });
-    } catch (error) {
-      close();
-      showError({
-        title: 'Error al actualizar',
-        text: 'No se pudieron actualizar los datos'
-      });
+  showLoading('Actualizando datos...', 'Recargando información');
+  try {
+    await loadInitialData();
+    if (selectedEPS && selectedPeriodo) {
+      await loadCarteraData(selectedEPS.id, selectedPeriodo.id);
     }
-  };
+    close();
+    showSuccess('Datos actualizados', {
+      title: '¡Actualización completada!',
+      text: 'Todos los datos han sido recargados'
+    });
+  } catch (error) {
+    close();
+    showError({
+      title: 'Error al actualizar',
+      text: 'No se pudieron actualizar los datos'
+    });
+  }
+};
 
   const handleDownloadTemplate = async () => {
     try {
