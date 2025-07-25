@@ -65,20 +65,30 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
     }
   };
 
-  const handleFileSelect = (file: File) => {
-    const validation = carteraUtils.validateExcelFile(file);
-    
-    if (!validation.valid) {
-      showError({
-        title: 'Formato de archivo inválido',
-        text: validation.error!
-      });
-      return;
-    }
+  const handleFileSelect = async (file: File) => {
+  const validation = carteraUtils.validateExcelFile(file);
+  
+  if (!validation.valid) {
+    showError({
+      title: 'Formato de archivo inválido',
+      text: validation.error!
+    });
+    return;
+  }
 
-    setSelectedFile(file);
-    setUploadResult(null);
-  };
+  // Validación adicional de estructura
+  const structureValidation = await carteraUtils.validateExcelStructure(file);
+  if (!structureValidation.valid) {
+    showError({
+      title: 'Estructura de archivo incorrecta',
+      text: structureValidation.error!
+    });
+    return;
+  }
+
+  setSelectedFile(file);
+  setUploadResult(null);
+};
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -215,10 +225,14 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
                 <h3 className="font-semibold text-info-900 mb-2">Instrucciones para la importación:</h3>
                 <ul className="text-sm text-info-800 space-y-1">
                   <li>• Descarga la plantilla Excel haciendo clic en el botón inferior</li>
-                  <li>• Completa los datos de cartera por IPS en los campos A30, A60, A90, A120, A180, A360, {'>'}360</li>
+                  <li>• Completa los datos con los siguientes campos obligatorios:</li>
+                  <li className="ml-4 font-mono text-xs bg-white px-2 py-1 rounded">
+                    IPS | A30 | A60 | A90 | A120 | A180 | A360 | SUP360 | TOTAL
+                  </li>
+                  <li>• El campo TOTAL se calculará automáticamente (puedes dejarlo en blanco)</li>
                   <li>• Si una IPS no existe en el sistema, se creará automáticamente</li>
                   <li>• El archivo debe ser formato .xlsx o .xls y no mayor a 50MB</li>
-                  <li>• El campo "Total" se calculará automáticamente</li>
+                  <li>• Asegúrate de que al menos un valor de cartera sea mayor a 0</li>
                 </ul>
               </div>
             </div>

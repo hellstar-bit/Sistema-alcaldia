@@ -267,118 +267,126 @@ export class CarteraService {
   // MÉTODOS PARA EXCEL
   // ===============================================
   async generatePlantillaExcel(): Promise<Buffer> {
-    const workbook = XLSX.utils.book_new();
-    
-    // Crear hoja con plantilla
-    const plantillaData = [
-      ['CÓDIGO_IPS', 'NOMBRE_IPS', 'A30', 'A60', 'A90', 'A120', 'A180', 'A360', 'SUP360', 'OBSERVACIONES'],
-      ['IPS001', 'Ejemplo IPS 1', '1000000', '500000', '0', '0', '0', '0', '0', 'Ejemplo'],
-      ['IPS002', 'Ejemplo IPS 2', '0', '0', '2000000', '1500000', '0', '0', '0', ''],
-    ];
+  const workbook = XLSX.utils.book_new();
+  
+  // Crear hoja con plantilla simplificada
+  const plantillaData = [
+    ['IPS', 'A30', 'A60', 'A90', 'A120', 'A180', 'A360', 'SUP360', 'TOTAL'],
+    ['Ejemplo IPS 1', '1000000', '500000', '300000', '200000', '100000', '50000', '25000', '2175000'],
+    ['Ejemplo IPS 2', '800000', '600000', '400000', '300000', '200000', '100000', '50000', '2450000'],
+    ['Ejemplo IPS 3', '0', '0', '1500000', '1000000', '500000', '250000', '100000', '3350000'],
+  ];
 
-    const worksheet = XLSX.utils.aoa_to_sheet(plantillaData);
-    
-    // Configurar anchos de columna
-    worksheet['!cols'] = [
-      { wch: 15 }, // CÓDIGO_IPS
-      { wch: 40 }, // NOMBRE_IPS
-      { wch: 15 }, // A30
-      { wch: 15 }, // A60
-      { wch: 15 }, // A90
-      { wch: 15 }, // A120
-      { wch: 15 }, // A180
-      { wch: 15 }, // A360
-      { wch: 15 }, // SUP360
-      { wch: 20 }, // OBSERVACIONES
-    ];
+  const worksheet = XLSX.utils.aoa_to_sheet(plantillaData);
+  
+  // Configurar anchos de columna
+  worksheet['!cols'] = [
+    { wch: 40 }, // IPS
+    { wch: 15 }, // A30
+    { wch: 15 }, // A60
+    { wch: 15 }, // A90
+    { wch: 15 }, // A120
+    { wch: 15 }, // A180
+    { wch: 15 }, // A360
+    { wch: 15 }, // SUP360
+    { wch: 18 }, // TOTAL
+  ];
 
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Plantilla Cartera');
-    
-    return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-  }
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Plantilla Cartera');
+  
+  return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+}
 
   async processExcelUpload(
-    buffer: Buffer, 
-    epsId: string, 
-    periodoId: string
-  ): Promise<{
-    success: boolean,
-    message: string,
-    processed: number,
-    errors: string[]
-  }> {
-    try {
-      const workbook = XLSX.read(buffer);
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+  buffer: Buffer, 
+  epsId: string, 
+  periodoId: string
+): Promise<{
+  success: boolean,
+  message: string,
+  processed: number,
+  errors: string[]
+}> {
+  try {
+    const workbook = XLSX.read(buffer);
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-      const errors: string[] = [];
-      let processed = 0;
+    const errors: string[] = [];
+    let processed = 0;
 
-      // Saltar la primera fila (headers)
-      for (let i = 1; i < data.length; i++) {
-        const row = data[i] as any[];
-        
-        if (!row || row.length === 0) continue;
+    // Saltar la primera fila (headers)
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i] as any[];
+      
+      if (!row || row.length === 0) continue;
 
-        try {
-          const [codigoIPS, nombreIPS, a30, a60, a90, a120, a180, a360, sup360, observaciones] = row;
+      try {
+        // Nuevos campos simplificados: IPS, A30, A60, A90, A120, A180, A360, SUP360, TOTAL
+        const [nombreIPS, a30, a60, a90, a120, a180, a360, sup360, total] = row;
 
-          if (!nombreIPS) {
-            errors.push(`Fila ${i + 1}: Nombre de IPS es requerido`);
-            continue;
-          }
-
-          // Buscar o crear IPS
-          const ips = await this.findOrCreateIPS(nombreIPS, codigoIPS);
-
-          // Verificar si la IPS fue recién creada
-          if (codigoIPS && !ips.codigo.startsWith('IPS_')) {
-            // La IPS ya existía
-          } else if (!codigoIPS || ips.codigo.startsWith('IPS_')) {
-            errors.push(`Fila ${i + 1}: IPS "${nombreIPS}" no estaba registrada, se creó automáticamente`);
-          }
-
-          // Crear registro de cartera
-          const carteraData = {
-            epsId,
-            ipsId: ips.id,
-            periodoId,
-            a30: parseFloat(a30) || 0,
-            a60: parseFloat(a60) || 0,
-            a90: parseFloat(a90) || 0,
-            a120: parseFloat(a120) || 0,
-            a180: parseFloat(a180) || 0,
-            a360: parseFloat(a360) || 0,
-            sup360: parseFloat(sup360) || 0,
-            observaciones: observaciones || null
-          };
-
-          await this.createCarteraData(carteraData);
-          processed++;
-
-        } catch (error) {
-          errors.push(`Fila ${i + 1}: ${error.message}`);
+        if (!nombreIPS) {
+          errors.push(`Fila ${i + 1}: Nombre de IPS es requerido`);
+          continue;
         }
+
+        // Buscar o crear IPS (sin código, solo por nombre)
+        const ips = await this.findOrCreateIPS(nombreIPS, `IPS_${Date.now()}_${i}`);
+
+        // Convertir valores a números
+        const valoresCartera = {
+          a30: parseFloat(a30) || 0,
+          a60: parseFloat(a60) || 0,
+          a90: parseFloat(a90) || 0,
+          a120: parseFloat(a120) || 0,
+          a180: parseFloat(a180) || 0,
+          a360: parseFloat(a360) || 0,
+          sup360: parseFloat(sup360) || 0,
+        };
+
+        // Calcular total automáticamente (ignorar el total del Excel)
+        const totalCalculado = Object.values(valoresCartera).reduce((sum, val) => sum + val, 0);
+
+        // Validar que al menos un valor sea mayor a 0
+        if (totalCalculado === 0) {
+          errors.push(`Fila ${i + 1}: "${nombreIPS}" - Todos los valores de cartera son 0`);
+          continue;
+        }
+
+        // Crear registro de cartera
+        const carteraData = {
+          epsId,
+          ipsId: ips.id,
+          periodoId,
+          ...valoresCartera,
+          observaciones: undefined
+        };
+
+        await this.createCarteraData(carteraData);
+        processed++;
+
+      } catch (error) {
+        errors.push(`Fila ${i + 1}: ${error.message}`);
       }
-
-      return {
-        success: processed > 0,
-        message: `Procesados ${processed} registros${errors.length > 0 ? ` con ${errors.length} advertencias` : ''}`,
-        processed,
-        errors
-      };
-
-    } catch (error) {
-      return {
-        success: false,
-        message: `Error al procesar archivo: ${error.message}`,
-        processed: 0,
-        errors: [error.message]
-      };
     }
+
+    return {
+      success: processed > 0,
+      message: `Procesados ${processed} registros${errors.length > 0 ? ` con ${errors.length} advertencias` : ''}`,
+      processed,
+      errors
+    };
+
+  } catch (error) {
+    return {
+      success: false,
+      message: `Error al procesar archivo: ${error.message}`,
+      processed: 0,
+      errors: [error.message]
+    };
   }
+}
 
   async exportCarteraToExcel(filters: CarteraFilterDto): Promise<Buffer> {
     const { data } = await this.getCarteraData({ ...filters, page: 1, limit: 10000 });

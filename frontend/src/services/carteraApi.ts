@@ -1,5 +1,6 @@
 // frontend/src/services/carteraApi.ts
 import api, { ApiResponse } from './api';
+import * as XLSX from 'xlsx';
 
 // ===============================================
 // INTERFACES
@@ -223,6 +224,45 @@ export const carteraUtils = {
       currency: 'COP',
       minimumFractionDigits: 0
     }).format(value);
+  },
+
+  validateExcelStructure: (file: File): Promise<{ valid: boolean; error?: string }> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+          
+          if (jsonData.length === 0) {
+            resolve({ valid: false, error: 'El archivo está vacío' });
+            return;
+          }
+
+          const headers = jsonData[0] as string[];
+          const requiredHeaders = ['IPS', 'A30', 'A60', 'A90', 'A120', 'A180', 'A360', 'SUP360', 'TOTAL'];
+          
+          const missingHeaders = requiredHeaders.filter(header => 
+            !headers.some(h => h?.toString().toUpperCase().trim() === header)
+          );
+
+          if (missingHeaders.length > 0) {
+            resolve({ 
+              valid: false, 
+              error: `Faltan las siguientes columnas: ${missingHeaders.join(', ')}` 
+            });
+            return;
+          }
+
+          resolve({ valid: true });
+        } catch (error) {
+          resolve({ valid: false, error: 'Error al leer el archivo Excel' });
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    });
   },
 
   formatFileSize: (bytes: number): string => {
