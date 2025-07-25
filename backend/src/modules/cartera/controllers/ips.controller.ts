@@ -201,7 +201,7 @@ export class IPSController {
     }
   }
 
-  @Patch(':id/toggle-status')
+ @Patch(':id/toggle-status')
   async toggleIPSStatus(@Param('id') id: string, @Request() req: any) {
     console.log('🔄 IPSController: PATCH /ips/:id/toggle-status', {
       user: req.user?.email || 'No user',
@@ -215,16 +215,8 @@ export class IPSController {
         message: `IPS ${ips.activa ? 'activada' : 'desactivada'} exitosamente`,
         data: ips
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ IPSController: Error al cambiar estado:', error);
-      return {
-        success: false,
-        message: error.message,
-        data: null
-      };
-    }
-  }
-}error('❌ IPSController: Error al cambiar estado:', error);
       return {
         success: false,
         message: error.message,
