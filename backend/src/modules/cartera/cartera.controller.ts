@@ -10,7 +10,9 @@ import {
   Res,
   BadRequestException,
   UseGuards,
-  Request
+  Request,
+  Delete,
+  Param
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
@@ -53,6 +55,40 @@ export class CarteraController {
       };
     }
   }
+
+  @Delete('data/periodo/:epsId/:periodoId')
+async deleteCarteraDataByPeriodo(
+  @Param('epsId') epsId: string, 
+  @Param('periodoId') periodoId: string, 
+  @Request() req: any
+) {
+  console.log('🗑️ CarteraController: DELETE /cartera/data/periodo/:epsId/:periodoId', {
+    user: req.user?.email || 'No user',
+    epsId,
+    periodoId
+  });
+
+  try {
+    const result = await this.carteraService.deleteCarteraDataByPeriodo(epsId, periodoId);
+    
+    return {
+      success: true,
+      message: `Se eliminaron ${result.deletedCount} registros del período`,
+      data: {
+        deletedCount: result.deletedCount,
+        epsId,
+        periodoId
+      }
+    };
+  } catch (error) {
+    console.error('❌ CarteraController: Error al eliminar datos del período:', error);
+    return {
+      success: false,
+      message: error.message,
+      data: null
+    };
+  }
+}
 
   // ===============================================
   // ENDPOINTS PARA PERÍODOS

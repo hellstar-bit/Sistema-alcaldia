@@ -16,7 +16,9 @@ import {
   CloudArrowUpIcon,
   DocumentTextIcon,
   ChartBarIcon,
-  ArrowPathIcon
+  ArrowPathIcon,
+  TrashIcon,
+  ChevronDownIcon
 } from '@heroicons/react/24/outline';
 import { CheckCircleIcon as CheckCircleSolid, XCircleIcon as XCircleSolid } from '@heroicons/react/24/solid';
 import { 
@@ -29,6 +31,8 @@ import {
 } from '../../services/carteraApi';
 import { ExcelUploadModal } from './ExcelUploadModal';
 import { useSweetAlert } from '../../hooks/useSweetAlert';
+const { showSuccess, showError, showLoading, close, showConfirm } = useSweetAlert();
+
 
 const MESES_ANIO = [
   { numero: 1, nombre: 'ENERO', abrev: 'ENE' },
@@ -44,6 +48,8 @@ const MESES_ANIO = [
   { numero: 11, nombre: 'NOVIEMBRE', abrev: 'NOV' },
   { numero: 12, nombre: 'DICIEMBRE', abrev: 'DIC' },
 ];
+
+
 
 const InformacionCartera: React.FC = () => {
   // Estados principales
@@ -156,6 +162,78 @@ const InformacionCartera: React.FC = () => {
     
     return prevStatus;
   });
+};
+  const handleCellClick = async (eps: EPS, periodo: Periodo) => {
+  setSelectedEPS(eps);
+  setSelectedPeriodo(periodo);
+  await loadCarteraData(eps.id, periodo.id);
+};
+
+
+  const handleDeletePeriodoData = async (eps: EPS, periodo: Periodo) => {
+  // Verificar si hay datos para eliminar
+  const hasData = getEPSPeriodoStatus(eps.id, periodo.id);
+  
+  if (!hasData) {
+    showError({
+      title: 'Sin datos',
+      text: 'No hay datos para eliminar en este período'
+    });
+    return;
+  }
+
+  // Confirmar eliminación
+  const result = await showConfirm({
+    title: '¿Eliminar datos del período?',
+    text: `¿Estás seguro de eliminar todos los datos de ${eps.nombre} para ${periodo.nombre}? Esta acción no se puede deshacer.`,
+    icon: 'warning',
+    confirmButtonText: 'Sí, eliminar',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#dc2626'
+  });
+
+  if (result.isConfirmed) {
+    try {
+      showLoading('Eliminando datos...', `Eliminando datos de ${eps.nombre} - ${periodo.nombre}`);
+      
+      const response = await carteraAPI.deleteCarteraDataByPeriodo(eps.id, periodo.id);
+      
+      close();
+      
+      if (response.success) {
+        showSuccess('Datos eliminados', {
+          title: '¡Datos eliminados exitosamente!',
+          text: `Se eliminaron ${response.data?.deletedCount || 0} registros del período`
+        });
+        
+        // Actualizar estado local
+        updateLocalEPSPeriodoStatus(eps.id, periodo.id, false);
+        
+        // Si es el período seleccionado, limpiar los datos
+        if (selectedEPS?.id === eps.id && selectedPeriodo?.id === periodo.id) {
+          setCarteraData([]);
+        }
+        
+        // Actualizar estado general
+        await updateEPSPeriodoStatus();
+        
+      } else {
+        showError({
+          title: 'Error al eliminar',
+          text: response.message || 'No se pudieron eliminar los datos'
+        });
+      }
+    } catch (error: any) {
+      close();
+      showError({
+        title: 'Error al eliminar',
+        text: error.message || 'Error de conexión'
+      });
+    }
+  }
+};
+  const getEPSPeriodoStatus = (epsId: string, periodoId: string): boolean => {
+  return carteraUtils.hasDataForPeriod(epsPeriosoStatus, epsId, periodoId);
 };
 
 
@@ -340,7 +418,7 @@ const InformacionCartera: React.FC = () => {
     return false;
   }
   
-  const hasData = carteraUtils.hasDataForPeriod(epsPeriosoStatus, epsId, periodo.id);
+   const hasData = carteraUtils.hasDataForPeriod(epsPeriosoStatus, epsId, periodo.id);
   
   console.log(`🔍 DEBUG: hasDataForEPSYearMonth`, {
     epsId,
@@ -354,6 +432,7 @@ const InformacionCartera: React.FC = () => {
   
   return hasData;
 };
+
 
   const getAvailableYears = (): number[] => {
     const years = Array.from(new Set(periodosList.map(p => p.year))).sort((a, b) => b - a);
@@ -674,61 +753,104 @@ const InformacionCartera: React.FC = () => {
                 {epsList.map((eps) => (
                   <tr 
                     key={eps.id} 
-                    className={`table-row cursor-pointer ${selectedEPS?.id === eps.id ? 'bg-primary-50 border-l-4 border-primary-500' : ''}`}
-                    onClick={() => handleEPSSelect(eps)}
+                    className={`table-row ${selectedEPS?.id === eps.id ? 'bg-primary-50 border-l-4 border-primary-500' : ''}`}
                   >
-                    <td className="table-cell px-6 py-4">
+                    <td 
+                      className="table-cell px-6 py-4 cursor-pointer"
+                      onClick={() => handleEPSSelect(eps)}
+                    >
                       <div className="flex items-center space-x-3">
-                        <div className={`w-3 h-3 rounded-full ${eps.activa ? 'bg-success-500' : 'bg-gray-400'}`}></div>
-                        <div className="min-w-0 flex-1">
-                          <span className="text-primary-900 font-semibold text-base block truncate">{eps.nombre}</span>
-                          <p className="text-xs text-gray-500 mt-1">{eps.codigo}</p>
+                        <div className={`w-3 h-3 rounded-full ${eps.activa ? 'bg-success-500' : 'bg-gray-400'}`} />
+                        <div>
+                          <div className="font-medium text-primary-900">{eps.nombre}</div>
+                          <div className="text-xs text-gray-500">{eps.codigo}</div>
                         </div>
                       </div>
                     </td>
+                    
                     {MESES_ANIO.map((mes) => {
-                      const tieneData = hasDataForEPSYearMonth(eps.id, selectedYear, mes.numero);
-                      const periodo = findPeriodoByYearAndMonth(selectedYear, mes.numero);
-                      const isSelected = selectedEPS?.id === eps.id && selectedPeriodo?.id === periodo?.id;
+                      const periodo = periodosList.find(p => p.mes === mes.numero && p.year === selectedYear);
+                      const hasData = periodo ? getEPSPeriodoStatus(eps.id, periodo.id) : false;
                       
                       return (
-                        <td key={mes.numero} className="table-cell text-center px-4 py-4">
-                          <div className="flex justify-center">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (selectedEPS?.id !== eps.id) {
-                                  handleEPSSelect(eps);
-                                }
-                                handleMonthSelect(mes.numero);
-                              }}
-                              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 ${
-                                isSelected 
-                                  ? 'bg-primary-600 ring-2 ring-primary-300 shadow-md' 
-                                  : 'hover:bg-gray-100 hover:shadow-sm'
-                              }`}
-                              title={`${eps.nombre} - ${mes.nombre} ${selectedYear}`}
-                            >
-                              {tieneData ? (
-                                <CheckCircleSolid className={`w-7 h-7 ${isSelected ? 'text-white' : 'text-success-600'}`} />
-                              ) : (
-                                <XCircleSolid className={`w-7 h-7 ${isSelected ? 'text-white' : 'text-danger-600'}`} />
-                              )}
-                            </button>
+                        <td 
+                          key={mes.numero} 
+                          className="table-cell text-center py-4 px-4 cursor-pointer"
+                          onClick={() => {
+                            if (periodo) {
+                              handleCellClick(eps, periodo);
+                            }
+                          }}
+                        >
+                          <div className="flex items-center justify-center">
+                            {hasData ? (
+                              <div className="relative group">
+                                <CheckCircleSolid className="w-6 h-6 text-success-600 hover:text-success-700 transition-colors" />
+                                {/* Tooltip con información */}
+                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                                  Con datos - Click para ver
+                                </div>
+                              </div>
+                            ) : (
+                              <XCircleSolid className="w-6 h-6 text-danger-600 hover:text-danger-700 transition-colors" />
+                            )}
                           </div>
                         </td>
                       );
                     })}
-                    <td className="table-cell text-center px-6 py-4">
-                      <button 
-                        className="text-primary-600 hover:text-primary-800 font-medium text-sm px-4 py-2 rounded-lg hover:bg-primary-50 transition-colors border border-transparent hover:border-primary-200"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEPSSelect(eps);
-                        }}
-                      >
-                        Seleccionar
-                      </button>
+                    
+                    <td className="table-cell text-center py-4 px-6">
+                      <div className="flex items-center justify-center space-x-2">
+                        <button
+                          onClick={() => handleEPSSelect(eps)}
+                          className="btn-sm btn-primary"
+                          title="Seleccionar EPS"
+                        >
+                          Seleccionar
+                        </button>
+                        
+                        {/* Dropdown para acciones de períodos con datos */}
+                        {periodosList.some(periodo => getEPSPeriodoStatus(eps.id, periodo.id)) && (
+                          <div className="relative group">
+                            <button
+                              className="btn-sm btn-danger flex items-center space-x-1"
+                              title="Eliminar datos de períodos"
+                            >
+                              <TrashIcon className="w-4 h-4" />
+                              <ChevronDownIcon className="w-3 h-3" />
+                            </button>
+                            
+                            {/* Menu desplegable */}
+                            <div className="absolute right-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-20">
+                              <div className="p-2">
+                                <div className="text-xs font-medium text-gray-500 mb-2 px-2">
+                                  Eliminar datos por período:
+                                </div>
+                                {MESES_ANIO.map((mes) => {
+                                  const periodo = periodosList.find(p => p.mes === mes.numero && p.year === selectedYear);
+                                  const hasData = periodo ? getEPSPeriodoStatus(eps.id, periodo.id) : false;
+                                  
+                                  if (!hasData || !periodo) return null;
+                                  
+                                  return (
+                                    <button
+                                      key={mes.numero}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeletePeriodoData(eps, periodo);
+                                      }}
+                                      className="w-full text-left px-3 py-2 text-sm text-danger-600 hover:bg-danger-50 rounded-md transition-colors flex items-center justify-between"
+                                    >
+                                      <span>{mes.nombre} {selectedYear}</span>
+                                      <TrashIcon className="w-4 h-4" />
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

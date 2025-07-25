@@ -1,4 +1,4 @@
-// frontend/src/hooks/useSweetAlert.ts
+// frontend/src/hooks/useSweetAlert.ts - VERSIÓN CORREGIDA
 import Swal from 'sweetalert2';
 
 interface AlertOptions {
@@ -8,6 +8,10 @@ interface AlertOptions {
   confirmButtonText?: string;
   cancelButtonText?: string;
   showCancelButton?: boolean;
+  confirmButtonColor?: string;  // ← Añadido
+  cancelButtonColor?: string;   // ← Añadido
+  allowOutsideClick?: boolean;  // ← Añadido
+  allowEscapeKey?: boolean;     // ← Añadido
 }
 
 export const useSweetAlert = () => {
@@ -24,14 +28,30 @@ export const useSweetAlert = () => {
     reverseButtons: true,
   };
 
-  const showSuccess = (p0: string, options: AlertOptions) => {
+  const showSuccess = (titleOrOptions: string | AlertOptions, options?: AlertOptions) => {
+    // Manejar sobrecarga de parámetros
+    let finalOptions: AlertOptions;
+    
+    if (typeof titleOrOptions === 'string') {
+      finalOptions = {
+        title: titleOrOptions,
+        ...options
+      };
+    } else {
+      finalOptions = titleOrOptions;
+    }
+
     return Swal.fire({
       ...baseConfig,
       icon: 'success',
-      title: options.title || '¡Éxito!',
-      text: options.text,
-      confirmButtonText: options.confirmButtonText || 'Aceptar',
+      title: finalOptions.title || '¡Éxito!',
+      text: finalOptions.text,
+      confirmButtonText: finalOptions.confirmButtonText || 'Aceptar',
       showCancelButton: false,
+      ...(finalOptions.confirmButtonColor && { 
+        confirmButtonColor: finalOptions.confirmButtonColor,
+        buttonsStyling: true 
+      }),
     });
   };
 
@@ -43,6 +63,10 @@ export const useSweetAlert = () => {
       text: options.text,
       confirmButtonText: options.confirmButtonText || 'Aceptar',
       showCancelButton: false,
+      ...(options.confirmButtonColor && { 
+        confirmButtonColor: options.confirmButtonColor,
+        buttonsStyling: true 
+      }),
     });
   };
 
@@ -54,6 +78,10 @@ export const useSweetAlert = () => {
       text: options.text,
       confirmButtonText: options.confirmButtonText || 'Aceptar',
       showCancelButton: false,
+      ...(options.confirmButtonColor && { 
+        confirmButtonColor: options.confirmButtonColor,
+        buttonsStyling: true 
+      }),
     });
   };
 
@@ -66,6 +94,16 @@ export const useSweetAlert = () => {
       confirmButtonText: options.confirmButtonText || 'Sí, confirmar',
       cancelButtonText: options.cancelButtonText || 'Cancelar',
       showCancelButton: true,
+      allowOutsideClick: options.allowOutsideClick ?? true,
+      allowEscapeKey: options.allowEscapeKey ?? true,
+      ...(options.confirmButtonColor && { 
+        confirmButtonColor: options.confirmButtonColor,
+        buttonsStyling: true 
+      }),
+      ...(options.cancelButtonColor && { 
+        cancelButtonColor: options.cancelButtonColor,
+        buttonsStyling: true 
+      }),
     });
   };
 
@@ -77,13 +115,18 @@ export const useSweetAlert = () => {
       text: options.text,
       confirmButtonText: options.confirmButtonText || 'Aceptar',
       showCancelButton: false,
+      ...(options.confirmButtonColor && { 
+        confirmButtonColor: options.confirmButtonColor,
+        buttonsStyling: true 
+      }),
     });
   };
 
-  const showLoading = (title: string = 'Procesando...', p0: string) => {
+  const showLoading = (title: string = 'Procesando...', text?: string) => {
     return Swal.fire({
       ...baseConfig,
       title,
+      text,
       allowOutsideClick: false,
       allowEscapeKey: false,
       showConfirmButton: false,

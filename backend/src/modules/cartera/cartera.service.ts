@@ -85,6 +85,55 @@ export class CarteraService {
     return ips;
   }
 
+  async deleteCarteraDataByPeriodo(epsId: string, periodoId: string): Promise<{ deletedCount: number }> {
+  console.log('🗑️ CarteraService: deleteCarteraDataByPeriodo', { epsId, periodoId });
+
+  try {
+    // Verificar que EPS y Período existan
+    const eps = await this.epsRepository.findOne({ where: { id: epsId } });
+    if (!eps) {
+      throw new NotFoundException('EPS no encontrada');
+    }
+
+    const periodo = await this.periodoRepository.findOne({ where: { id: periodoId } });
+    if (!periodo) {
+      throw new NotFoundException('Período no encontrado');
+    }
+
+    // Contar registros a eliminar antes de la eliminación
+    const countResult = await this.carteraDataRepository
+      .createQueryBuilder('cartera')
+      .where('cartera.epsId = :epsId', { epsId })
+      .andWhere('cartera.periodoId = :periodoId', { periodoId })
+      .getCount();
+
+    console.log(`Found ${countResult} records to delete for EPS ${eps.nombre} in period ${periodo.year}-${periodo.mes}`);
+
+    if (countResult === 0) {
+      throw new BadRequestException('No hay datos para eliminar en este período');
+    }
+
+    // Realizar la eliminación
+    const deleteResult = await this.carteraDataRepository
+      .createQueryBuilder()
+      .delete()
+      .from(CarteraData)
+      .where('epsId = :epsId', { epsId })
+      .andWhere('periodoId = :periodoId', { periodoId })
+      .execute();
+
+    console.log('✅ CarteraService: Datos eliminados exitosamente:', deleteResult.affected);
+
+    return {
+      deletedCount: deleteResult.affected || 0
+    };
+
+  } catch (error) {
+    console.error('❌ CarteraService: Error in deleteCarteraDataByPeriodo:', error);
+    throw new BadRequestException(`Error al eliminar datos del período: ${error.message}`);
+  }
+}
+
   // ===============================================
   // MÉTODOS PARA PERÍODOS
   // ===============================================
