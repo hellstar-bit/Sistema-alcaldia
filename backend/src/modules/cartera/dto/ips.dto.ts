@@ -1,5 +1,6 @@
 // backend/src/modules/cartera/dto/ips.dto.ts
-import { IsString, IsOptional, IsBoolean } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsNumber } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class CreateIPSDto {
   @IsString()
@@ -7,7 +8,7 @@ export class CreateIPSDto {
 
   @IsOptional()
   @IsString()
-  codigo?: string; // Se generará automáticamente si no se proporciona
+  codigo?: string;
 
   @IsOptional()
   @IsString()
@@ -82,6 +83,11 @@ export class IPSFilterDto {
   search?: string;
 
   @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
   @IsBoolean()
   soloActivas?: boolean;
 
@@ -91,11 +97,16 @@ export class IPSFilterDto {
 
   @IsOptional()
   @IsString()
-  epsId?: string; // Para filtrar IPS asignadas a una EPS específica
+  epsId?: string;
 
   @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
   @IsBoolean()
-  sinAsignar?: boolean; // Para mostrar solo IPS no asignadas a ninguna EPS
+  sinAsignar?: boolean;
 
   @IsOptional()
   @IsString()
@@ -106,8 +117,12 @@ export class IPSFilterDto {
   orderDirection?: 'ASC' | 'DESC';
 
   @IsOptional()
+  @Transform(({ value }) => parseInt(value, 10))
+  @IsNumber()
   page?: number;
 
   @IsOptional()
+  @Transform(({ value }) => parseInt(value, 10))
+  @IsNumber()
   limit?: number;
 }

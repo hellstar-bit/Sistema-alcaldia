@@ -10,12 +10,13 @@ import {
   Query, 
   UseGuards,
   Request,
-  Patch
+  Patch,
+  ValidationPipe,
+  UsePipes
 } from '@nestjs/common';
 import { IPSService } from '../services/ips.service';
 import { CreateIPSDto, UpdateIPSDto, IPSFilterDto } from '../dto/ips.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { error } from 'console';
 
 @Controller('ips')
 @UseGuards(JwtAuthGuard)
@@ -23,10 +24,17 @@ export class IPSController {
   constructor(private readonly ipsService: IPSService) {}
 
   @Get()
+  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   async getAllIPS(@Query() filters: IPSFilterDto, @Request() req: any) {
     console.log('🏥 IPSController: GET /ips', {
       user: req.user?.email || 'No user',
-      filters
+      filters,
+      filtersTypes: {
+        soloActivas: typeof filters.soloActivas,
+        sinAsignar: typeof filters.sinAsignar,
+        page: typeof filters.page,
+        limit: typeof filters.limit
+      }
     });
 
     try {
@@ -201,7 +209,7 @@ export class IPSController {
     }
   }
 
- @Patch(':id/toggle-status')
+  @Patch(':id/toggle-status')
   async toggleIPSStatus(@Param('id') id: string, @Request() req: any) {
     console.log('🔄 IPSController: PATCH /ips/:id/toggle-status', {
       user: req.user?.email || 'No user',
@@ -215,7 +223,7 @@ export class IPSController {
         message: `IPS ${ips.activa ? 'activada' : 'desactivada'} exitosamente`,
         data: ips
       };
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ IPSController: Error al cambiar estado:', error);
       return {
         success: false,
