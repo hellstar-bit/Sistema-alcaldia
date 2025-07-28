@@ -1,4 +1,3 @@
-// frontend/src/services/flujoApi.ts
 import api, { ApiResponse } from './api';
 import * as XLSX from 'xlsx';
 
@@ -128,6 +127,16 @@ export interface DeleteFlujoPeriodoDataResponse {
   } | null;
 }
 
+// NUEVA INTERFACE PARA INFORMACIÓN ADRES
+export interface EpsAdresInfo {
+  eps: string;
+  periodo: string;
+  upc: number;
+  upc92: number;
+  upc60: number;
+  valorGirado: number;
+}
+
 // ===============================================
 // SERVICIOS API
 // ===============================================
@@ -230,6 +239,21 @@ export const flujoAPI = {
       return response.data;
     } catch (error: any) {
       console.error('❌ FlujoAPI: Error al guardar datos de flujo EPS:', error);
+      throw error;
+    }
+  },
+
+  // ===============================================
+  // NUEVA: INFORMACIÓN ADRES-FLUJO
+  // ===============================================
+  async getEpsAdresInfo(epsId: string): Promise<ApiResponse<EpsAdresInfo[]>> {
+    try {
+      console.log('🔍 FlujoAPI: Obteniendo información de ADRES para EPS...', { epsId });
+      const response = await api.get(`/flujo/eps-adres-info/${epsId}`);
+      console.log('✅ FlujoAPI: Información de ADRES obtenida exitosamente');
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ FlujoAPI: Error al obtener información de ADRES:', error);
       throw error;
     }
   },
@@ -352,12 +376,12 @@ export const flujoUtils = {
   },
 
   formatPercentage: (value: number | null | undefined): string => {
-  if (value === null || value === undefined || isNaN(Number(value))) {
-    return '0.00%';
-  }
-  const numValue = Number(value);
-  return `${numValue.toFixed(2)}%`;
-},
+    if (value === null || value === undefined || isNaN(Number(value))) {
+      return '0.00%';
+    }
+    const numValue = Number(value);
+    return `${numValue.toFixed(2)}%`;
+  },
 
   formatDate: (date: Date | string): string => {
     if (!date) return '';

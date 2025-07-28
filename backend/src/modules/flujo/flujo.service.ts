@@ -1,4 +1,3 @@
-// backend/src/modules/flujo/flujo.service.ts
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -8,6 +7,7 @@ import { FlujoEpsData } from './entities/flujo-eps-data.entity';
 import { EPS } from '../cartera/entities/eps.entity';
 import { IPS } from '../cartera/entities/ips.entity';
 import { Periodo } from '../cartera/entities/periodo.entity';
+import { AdresData } from '../adres/entities/adres-data.entity'; // NUEVO IMPORT
 import { CreateFlujoIpsDataDto } from './dto/create-flujo-ips-data.dto';
 import { CreateFlujoEpsDataDto } from './dto/create-flujo-eps-data.dto';
 import { FlujoFilterDto } from './dto/flujo-filter.dto';
@@ -28,6 +28,8 @@ export class FlujoService {
     private ipsRepository: Repository<IPS>,
     @InjectRepository(Periodo)
     private periodoRepository: Repository<Periodo>,
+    @InjectRepository(AdresData) // NUEVO REPOSITORIO
+    private adresDataRepository: Repository<AdresData>,
   ) {}
 
   // ===============================================
@@ -262,6 +264,58 @@ export class FlujoService {
   }
 
   // ===============================================
+  // NUEVO: MÉTODOS PARA INFORMACIÓN ADRES-FLUJO
+  // ===============================================
+  async getEpsAdresInfo(epsId: string): Promise<Array<{
+    eps: string;
+    periodo: string;
+    upc: number;
+    upc92: number;
+    upc60: number;
+    valorGirado: number;
+  }>> {
+    console.log('🔍 FlujoService: getEpsAdresInfo - Obteniendo información de ADRES para EPS:', epsId);
+
+    try {
+      // Primero verificar que la EPS existe
+      const eps = await this.epsRepository.findOne({ where: { id: epsId } });
+      if (!eps) {
+        throw new BadRequestException('EPS no encontrada');
+      }
+
+      // Consultar datos de ADRES para esta EPS
+      const adresData = await this.adresDataRepository
+        .createQueryBuilder('adres')
+        .leftJoinAndSelect('adres.eps', 'eps')
+        .leftJoinAndSelect('adres.periodo', 'periodo')
+        .where('adres.epsId = :epsId', { epsId })
+        .andWhere('adres.activo = :activo', { activo: true })
+        .orderBy('periodo.year', 'DESC')
+        .addOrderBy('periodo.mes', 'DESC')
+        .getMany();
+
+      console.log(`📊 FlujoService: Encontrados ${adresData.length} registros de ADRES para la EPS`);
+
+      // Transformar los datos al formato requerido
+      const result = adresData.map(item => ({
+        eps: item.eps.nombre,
+        periodo: `${item.periodo.nombre} ${item.periodo.year}`,
+        upc: item.upc,
+        upc92: Math.round(item.upc * 0.92 * 100) / 100, // 92% del UPC
+        upc60: Math.round(item.upc * 0.60 * 100) / 100, // 60% del UPC
+        valorGirado: item.valorGirado
+      }));
+
+      console.log('✅ FlujoService: Información de ADRES procesada exitosamente');
+      return result;
+
+    } catch (error) {
+      console.error('❌ FlujoService: Error en getEpsAdresInfo:', error);
+      throw new BadRequestException(`Error al obtener información de ADRES: ${error.message}`);
+    }
+  }
+
+  // ===============================================
   // MÉTODOS PARA EXCEL
   // ===============================================
   async generatePlantillaExcel(): Promise<Buffer> {
@@ -309,94 +363,94 @@ export class FlujoService {
   }
 
   async processExcelUpload(
-  buffer: Buffer,
-  epsId: string,
-  periodoId: string
-): Promise<{
-  success: boolean;
-  message: string;
-  processed: number;
-  errors: string[];
-}> {
-  try {
-    const workbook = XLSX.read(buffer);
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-    const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+    buffer: Buffer,
+    epsId: string,
+    periodoId: string
+  ): Promise<{
+    success: boolean;
+    message: string;
+    processed: number;
+    errors: string[];
+  }> {
+    try {
+      const workbook = XLSX.read(buffer);
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-    const errors: string[] = [];
-    let processed = 0;
+      const errors: string[] = [];
+      let processed = 0;
 
-    // Crear o encontrar el control de carga
-    const controlCarga = await this.findOrCreateControlCarga(epsId, periodoId);
+      // Crear o encontrar el control de carga
+      const controlCarga = await this.findOrCreateControlCarga(epsId, periodoId);
 
-    // Procesar filas (saltar headers)
-    for (let i = 1; i < data.length; i++) {
-      const row = data[i] as any[];
-      
-      if (!row || row.length === 0) continue;
+      // Procesar filas (saltar headers)
+      for (let i = 1; i < data.length; i++) {
+        const row = data[i] as any[];
+        
+        if (!row || row.length === 0) continue;
 
-      try {
-        const [
-          prestador, incremento, tipoContrato, fechaContrato,
-          valorFacturado, valorGlosa, reconocido, valorPagado,
-          fechaPago, saldoAdeudado, saldoTotal, origenGiro
-        ] = row;
+        try {
+          const [
+            prestador, incremento, tipoContrato, fechaContrato,
+            valorFacturado, valorGlosa, reconocido, valorPagado,
+            fechaPago, saldoAdeudado, saldoTotal, origenGiro
+          ] = row;
 
-        if (!prestador) {
-          errors.push(`Fila ${i + 1}: Prestador es requerido`);
-          continue;
+          if (!prestador) {
+            errors.push(`Fila ${i + 1}: Prestador es requerido`);
+            continue;
+          }
+
+          // Buscar o crear IPS
+          const ips = await this.findOrCreateIPS(prestador);
+
+          // Convertir fechas
+          const fechaContratoDate = fechaContrato ? new Date(fechaContrato) : null;
+          const fechaPagoDate = fechaPago ? new Date(fechaPago) : null;
+
+          // ✅ OBJETO CORREGIDO CON undefined EN LUGAR DE null
+          const flujoIpsData = {
+            controlCargaId: controlCarga.id,
+            ipsId: ips.id,
+            incremento: parseFloat(incremento) || 0,
+            tipoContrato: tipoContrato || undefined,
+            fechaContrato: fechaContratoDate ? fechaContratoDate.toISOString().split('T')[0] : undefined,
+            valorFacturado: parseFloat(valorFacturado) || 0,
+            valorGlosa: parseFloat(valorGlosa) || 0,
+            reconocido: parseFloat(reconocido) || 0,
+            valorPagado: parseFloat(valorPagado) || 0,
+            fechaPago: fechaPagoDate ? fechaPagoDate.toISOString().split('T')[0] : undefined,
+            saldoAdeudado: parseFloat(saldoAdeudado) || 0,
+            saldoTotal: parseFloat(saldoTotal) || 0,
+            orden: undefined,
+            giro: origenGiro || undefined
+          };
+
+          await this.createFlujoIpsData(flujoIpsData);
+          processed++;
+
+        } catch (error) {
+          errors.push(`Fila ${i + 1}: ${error.message}`);
         }
-
-        // Buscar o crear IPS
-        const ips = await this.findOrCreateIPS(prestador);
-
-        // Convertir fechas
-        const fechaContratoDate = fechaContrato ? new Date(fechaContrato) : null;
-        const fechaPagoDate = fechaPago ? new Date(fechaPago) : null;
-
-        // ✅ OBJETO CORREGIDO CON undefined EN LUGAR DE null
-        const flujoIpsData = {
-          controlCargaId: controlCarga.id,
-          ipsId: ips.id,
-          incremento: parseFloat(incremento) || 0,
-          tipoContrato: tipoContrato || undefined,
-          fechaContrato: fechaContratoDate ? fechaContratoDate.toISOString().split('T')[0] : undefined,
-          valorFacturado: parseFloat(valorFacturado) || 0,
-          valorGlosa: parseFloat(valorGlosa) || 0,
-          reconocido: parseFloat(reconocido) || 0,
-          valorPagado: parseFloat(valorPagado) || 0,
-          fechaPago: fechaPagoDate ? fechaPagoDate.toISOString().split('T')[0] : undefined,
-          saldoAdeudado: parseFloat(saldoAdeudado) || 0,
-          saldoTotal: parseFloat(saldoTotal) || 0,
-          orden: undefined,
-          giro: origenGiro || undefined
-        };
-
-        await this.createFlujoIpsData(flujoIpsData);
-        processed++;
-
-      } catch (error) {
-        errors.push(`Fila ${i + 1}: ${error.message}`);
       }
+
+      return {
+        success: processed > 0,
+        message: `Procesados ${processed} registros${errors.length > 0 ? ` con ${errors.length} advertencias` : ''}`,
+        processed,
+        errors
+      };
+
+    } catch (error) {
+      return {
+        success: false,
+        message: `Error al procesar archivo: ${error.message}`,
+        processed: 0,
+        errors: [error.message]
+      };
     }
-
-    return {
-      success: processed > 0,
-      message: `Procesados ${processed} registros${errors.length > 0 ? ` con ${errors.length} advertencias` : ''}`,
-      processed,
-      errors
-    };
-
-  } catch (error) {
-    return {
-      success: false,
-      message: `Error al procesar archivo: ${error.message}`,
-      processed: 0,
-      errors: [error.message]
-    };
   }
-}
 
   async exportFlujoToExcel(filters: FlujoFilterDto): Promise<Buffer> {
     const { data } = await this.getFlujoIpsData({ ...filters, page: 1, limit: 10000 });

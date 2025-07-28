@@ -1,4 +1,4 @@
-// frontend/src/components/layout/Sidebar.tsx - CON MÓDULO DE GESTIÓN
+// frontend/src/components/layout/Sidebar.tsx (corregida con ADRES agregado)
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -64,6 +64,12 @@ const menuItems: MenuItem[] = [
         label: 'Información Flujo',
         icon: BanknotesIcon,
         href: '/carga/flujo'
+      },
+      {  // ✅ AGREGADO: Ítem para ADRES
+        id: 'info-adres',
+        label: 'Información ADRES',
+        icon: DocumentTextIcon,  // Ícono sugerido; cámbialo si quieres
+        href: '/carga/adres'
       }
     ]
   },

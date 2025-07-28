@@ -1,4 +1,3 @@
-// frontend/src/components/flujo/InformacionFlujo.tsx - VERSIÓN CORREGIDA
 import React, { useState, useEffect } from 'react';
 import {
   MagnifyingGlassIcon,
@@ -14,7 +13,7 @@ import {
   CheckCircleIcon,
   XCircleIcon
 } from '@heroicons/react/24/outline';
-import { flujoAPI, flujoUtils, ControlCargaGrid, FlujoIpsData, FlujoEpsData, FlujoFilterParams } from '../../services/flujoApi';
+import { flujoAPI, flujoUtils, ControlCargaGrid, FlujoIpsData, FlujoEpsData, FlujoFilterParams, EpsAdresInfo } from '../../services/flujoApi';
 import { carteraAPI } from '../../services/carteraApi';
 import { FlujoExcelUploadModal } from './ExcelUploadModal';
 import { useSweetAlert } from '../../hooks/useSweetAlert';
@@ -48,7 +47,9 @@ export const InformacionFlujo: React.FC = () => {
   // Estados de datos
   const [flujoIpsData, setFlujoIpsData] = useState<FlujoIpsData[]>([]);
   const [flujoEpsData, setFlujoEpsData] = useState<FlujoEpsData | null>(null);
+  const [epsAdresInfo, setEpsAdresInfo] = useState<EpsAdresInfo[]>([]);
   const [loadingData, setLoadingData] = useState(false);
+  const [loadingAdresInfo, setLoadingAdresInfo] = useState(false);
 
   // Estados de UI
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -56,7 +57,7 @@ export const InformacionFlujo: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
 
-  // ✅ CORREGIR: Estados de resumen con inicialización segura
+  // Estados de resumen con inicialización segura
   const [summary, setSummary] = useState({
     totalValorFacturado: 0,
     totalReconocido: 0,
@@ -77,9 +78,10 @@ export const InformacionFlujo: React.FC = () => {
     if (selectedEPS && selectedPeriodo) {
       loadFlujoData();
     } else {
-      // ✅ CORREGIR: Reset seguro del estado
+      // Reset seguro del estado
       setFlujoIpsData([]);
       setFlujoEpsData(null);
+      setEpsAdresInfo([]);
       setSummary({
         totalValorFacturado: 0,
         totalReconocido: 0,
@@ -114,8 +116,8 @@ export const InformacionFlujo: React.FC = () => {
         const currentYear = new Date().getFullYear();
         const currentYearPeriods = periodosResponse.data
             .filter(periodo => periodo.year === currentYear && periodo.activo)
-            .sort((a, b) => a.mes - b.mes) // ✅ ESTO ORDENA DE 1 A 12 (Enero a Diciembre)
-            .slice(0, 12); // ✅ ASEGURAR SOLO 12 MESES
+            .sort((a, b) => a.mes - b.mes)
+            .slice(0, 12);
         
         setAllPeriodos(currentYearPeriods);
         }
@@ -132,95 +134,105 @@ export const InformacionFlujo: React.FC = () => {
   };
 
   const loadFlujoData = async () => {
-  if (!selectedEPS || !selectedPeriodo) {
-    console.log('❌ No hay EPS o período seleccionado');
-    return;
-  }
-
-  try {
-    setLoadingData(true);
-    console.log('🔄 Iniciando carga de datos...');
-
-    const filters: FlujoFilterParams = {
-      epsId: selectedEPS.id,
-      periodoId: selectedPeriodo.id,
-      page: currentPage,
-      limit: itemsPerPage
-    };
-
-    if (searchTerm.trim()) {
-      filters.search = searchTerm.trim();
+    if (!selectedEPS || !selectedPeriodo) {
+      console.log('❌ No hay EPS o período seleccionado');
+      return;
     }
 
-    console.log('📤 Filtros enviados:', filters);
-    
-    const [ipsDataResponse, epsDataResponse] = await Promise.all([
-      flujoAPI.getFlujoIpsData(filters),
-      flujoAPI.getFlujoEpsData(selectedEPS.id, selectedPeriodo.id)
-    ]);
-    
-    console.log('📥 Respuesta completa IPS:', ipsDataResponse);
-    console.log('📥 Success IPS:', ipsDataResponse.success);
-    console.log('📥 Data IPS:', ipsDataResponse.data);
-    
-    if (ipsDataResponse.success && ipsDataResponse.data) {
-      console.log('✅ Procesando datos exitosamente');
-      console.log('📊 Datos a establecer:', ipsDataResponse.data.data);
-      console.log('📊 Length de datos:', ipsDataResponse.data.data?.length);
+    try {
+      setLoadingData(true);
+      setLoadingAdresInfo(true);
+      console.log('🔄 Iniciando carga de datos...');
+
+      const filters: FlujoFilterParams = {
+        epsId: selectedEPS.id,
+        periodoId: selectedPeriodo.id,
+        page: currentPage,
+        limit: itemsPerPage
+      };
+
+      if (searchTerm.trim()) {
+        filters.search = searchTerm.trim();
+      }
+
+      console.log('📤 Filtros enviados:', filters);
       
-      setFlujoIpsData(ipsDataResponse.data.data || []);
-      setSummary(ipsDataResponse.data.summary || {
-        totalValorFacturado: 0,
-        totalReconocido: 0,
-        totalPagado: 0,
-        totalSaldoAdeudado: 0
-      });
+      const [ipsDataResponse, epsDataResponse, adresInfoResponse] = await Promise.all([
+        flujoAPI.getFlujoIpsData(filters),
+        flujoAPI.getFlujoEpsData(selectedEPS.id, selectedPeriodo.id),
+        flujoAPI.getEpsAdresInfo(selectedEPS.id)
+      ]);
       
-      console.log('✅ Estados actualizados');
+      console.log('📥 Respuesta completa IPS:', ipsDataResponse);
+      console.log('📥 Success IPS:', ipsDataResponse.success);
+      console.log('📥 Data IPS:', ipsDataResponse.data);
       
-      // Debug del estado después de actualizar
-      setTimeout(() => {
-        console.log('🔍 Estado final flujoIpsData.length:', flujoIpsData.length);
-      }, 100);
-      
-    } else {
-      console.log('⚠️ Respuesta no exitosa o sin datos');
+      if (ipsDataResponse.success && ipsDataResponse.data) {
+        console.log('✅ Procesando datos exitosamente');
+        console.log('📊 Datos a establecer:', ipsDataResponse.data.data);
+        console.log('📊 Length de datos:', ipsDataResponse.data.data?.length);
+        
+        setFlujoIpsData(ipsDataResponse.data.data || []);
+        setSummary(ipsDataResponse.data.summary || {
+          totalValorFacturado: 0,
+          totalReconocido: 0,
+          totalPagado: 0,
+          totalSaldoAdeudado: 0
+        });
+        
+        console.log('✅ Estados actualizados');
+        
+        setTimeout(() => {
+          console.log('🔍 Estado final flujoIpsData.length:', flujoIpsData.length);
+        }, 100);
+        
+      } else {
+        console.log('⚠️ Respuesta no exitosa o sin datos');
+        setFlujoIpsData([]);
+        setSummary({
+          totalValorFacturado: 0,
+          totalReconocido: 0,
+          totalPagado: 0,
+          totalSaldoAdeudado: 0
+        });
+      }
+
+      if (epsDataResponse.success && epsDataResponse.data) {
+        console.log('📈 Datos EPS encontrados:', epsDataResponse.data);
+        setFlujoEpsData(epsDataResponse.data);
+      } else {
+        console.log('📈 No hay datos EPS');
+        setFlujoEpsData(null);
+      }
+
+      if (adresInfoResponse.success && adresInfoResponse.data) {
+        console.log('🔍 Información de ADRES encontrada:', adresInfoResponse.data);
+        setEpsAdresInfo(adresInfoResponse.data);
+      } else {
+        console.log('🔍 No hay información de ADRES');
+        setEpsAdresInfo([]);
+      }
+
+    } catch (error: any) {
+      console.error('❌ Error en loadFlujoData:', error);
       setFlujoIpsData([]);
+      setFlujoEpsData(null);
+      setEpsAdresInfo([]);
       setSummary({
         totalValorFacturado: 0,
         totalReconocido: 0,
         totalPagado: 0,
         totalSaldoAdeudado: 0
       });
+      showError({
+        title: 'Error al cargar datos',
+        text: 'No se pudieron cargar los datos de flujo'
+      });
+    } finally {
+      setLoadingData(false);
+      setLoadingAdresInfo(false);
     }
-
-    if (epsDataResponse.success && epsDataResponse.data) {
-      console.log('📈 Datos EPS encontrados:', epsDataResponse.data);
-      setFlujoEpsData(epsDataResponse.data);
-    } else {
-      console.log('📈 No hay datos EPS');
-      setFlujoEpsData(null);
-    }
-
-  } catch (error: any) {
-    console.error('❌ Error en loadFlujoData:', error);
-    setFlujoIpsData([]);
-    setFlujoEpsData(null);
-    setSummary({
-      totalValorFacturado: 0,
-      totalReconocido: 0,
-      totalPagado: 0,
-      totalSaldoAdeudado: 0
-    });
-    showError({
-      title: 'Error al cargar datos',
-      text: 'No se pudieron cargar los datos de flujo'
-    });
-  } finally {
-    setLoadingData(false);
-  }
-};
-
+  };
 
   // ===============================================
   // FUNCIONES DE ACCIONES
@@ -248,11 +260,11 @@ export const InformacionFlujo: React.FC = () => {
           text: `Se eliminaron ${response.data?.deletedCount || 0} registros`
         });
 
-        // Recargar datos
         await loadInitialData();
         if (selectedEPS?.id === eps.id && selectedPeriodo?.id === periodo.id) {
           setFlujoIpsData([]);
           setFlujoEpsData(null);
+          setEpsAdresInfo([]);
           setSummary({
             totalValorFacturado: 0,
             totalReconocido: 0,
@@ -356,7 +368,6 @@ export const InformacionFlujo: React.FC = () => {
     );
   };
 
-  // ✅ CORREGIR: Función para obtener nombres de meses
   const getMesNombre = (mes: number): string => {
     const meses = [
       'ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN',
@@ -415,7 +426,94 @@ export const InformacionFlujo: React.FC = () => {
         </div>
       </div>
 
-      {/* ✅ CORREGIR: Tabla 1 - Control de Carga con formato correcto */}
+      {/* TABLA 1: Métricas Detalladas por EPS y Período - MOVIDA ARRIBA */}
+      {selectedEPS && (
+        <div className="bg-white rounded-xl shadow-elegant overflow-hidden">
+          <div className="bg-gradient-to-r from-purple-50 to-purple-100 px-6 py-4 border-b border-purple-200">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-purple-900 flex items-center">
+                <CurrencyDollarIcon className="w-5 h-5 mr-2" />
+                Métricas Detalladas por EPS y Período - {selectedEPS.nombre}
+              </h2>
+              <p className="text-sm text-purple-600">Datos UPC y valor girado por período</p>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            {loadingAdresInfo ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
+                  <p className="text-gray-600">Cargando métricas detalladas...</p>
+                </div>
+              </div>
+            ) : epsAdresInfo.length > 0 ? (
+              <table className="min-w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      EPS
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Período
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      UPC
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      92% UPC
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      60% UPC
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Valor Girado
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {epsAdresInfo.map((item, index) => (
+                    <tr key={index} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {item.eps}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {item.periodo}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
+                        {flujoUtils.formatCurrency(item.upc)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
+                        <span className="text-green-600 font-medium">
+                          {flujoUtils.formatCurrency(item.upc92)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
+                        <span className="text-blue-600 font-medium">
+                          {flujoUtils.formatCurrency(item.upc60)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
+                        {flujoUtils.formatCurrency(item.valorGirado)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="text-center py-12">
+                <ClockIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No hay métricas disponibles</h3>
+                <p className="text-gray-600">
+                  No se encontraron datos de ADRES para la EPS seleccionada
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* TABLA 2: Control de Carga - AHORA ESTÁ DESPUÉS DE MÉTRICAS */}
       <div className="bg-white rounded-xl shadow-elegant overflow-hidden">
         <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
@@ -533,7 +631,7 @@ export const InformacionFlujo: React.FC = () => {
         </div>
       )}
 
-      {/* ✅ Tabla 2: Resumen financiero con verificación segura */}
+      {/* Resumen financiero */}
       {selectedEPS && selectedPeriodo && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-lg p-4">
@@ -586,7 +684,7 @@ export const InformacionFlujo: React.FC = () => {
         </div>
       )}
 
-      {/* Tabla 3: Datos de IPS */}
+      {/* Tabla de Datos de IPS */}
       {selectedEPS && selectedPeriodo && (
         <div className="bg-white rounded-xl shadow-elegant overflow-hidden">
           <div className="bg-gradient-to-r from-green-50 to-green-100 px-6 py-4 border-b border-green-200">

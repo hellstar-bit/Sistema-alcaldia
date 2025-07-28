@@ -1,10 +1,11 @@
-// backend/src/app.module.ts - VERSIÓN ACTUALIZADA CON FLUJO
+// backend/src/app.module.ts - CON ADRES MODULE
 import { Module, OnModuleInit } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './modules/auth/auth.module';
 import { CarteraModule } from './modules/cartera/cartera.module';
-import { FlujoModule } from './modules/flujo/flujo.module'; // NUEVO
+import { FlujoModule } from './modules/flujo/flujo.module';
+import { AdresModule } from './modules/adres/adres.module';  // ✅ AGREGADO
 import { AuthService } from './modules/auth/auth.service';
 import { CarteraService } from './modules/cartera/cartera.service';
 
@@ -23,15 +24,12 @@ import { CarteraService } from './modules/cartera/cartera.service';
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       synchronize: process.env.NODE_ENV === 'development',
       logging: process.env.DB_LOGGING === 'true',
-      
       charset: 'utf8mb4',
       timezone: '+00:00',
       ssl: false,
-      
       extra: {
         connectionLimit: 10,
       },
-      
       retryAttempts: 3,
       retryDelay: 3000,
       autoLoadEntities: true,
@@ -40,7 +38,8 @@ import { CarteraService } from './modules/cartera/cartera.service';
     }),
     AuthModule,
     CarteraModule,
-    FlujoModule, // AGREGADO
+    FlujoModule,
+    AdresModule,  // ✅ AGREGADO
   ],
 })
 export class AppModule implements OnModuleInit {

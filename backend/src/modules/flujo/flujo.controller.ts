@@ -1,4 +1,3 @@
-// backend/src/modules/flujo/flujo.controller.ts
 import { 
   Controller, 
   Get, 
@@ -59,44 +58,44 @@ export class FlujoController {
   // ENDPOINTS PARA DATOS DE IPS
   // ===============================================
   @Get('ips-data')
-async getFlujoIpsData(@Query() filters: FlujoFilterDto, @Request() req: any) {
-  console.log('💰 FlujoController: GET /flujo/ips-data', {
-    user: req.user?.email || 'No user',
-    filters,
-  });
+  async getFlujoIpsData(@Query() filters: FlujoFilterDto, @Request() req: any) {
+    console.log('💰 FlujoController: GET /flujo/ips-data', {
+      user: req.user?.email || 'No user',
+      filters,
+    });
 
-  try {
-    const result = await this.flujoService.getFlujoIpsData(filters);
-    
-    // ✅ CAMBIAR ESTA ESTRUCTURA:
-    return {
-      success: true,
-      message: 'Datos de flujo IPS obtenidos exitosamente',
-      data: {  // ← AGREGAR UN OBJETO "data" QUE CONTENGA:
-        data: result.data,  // ← Los registros van en data.data
-        pagination: {
-          total: result.total,
-          page: filters.page || 1,
-          limit: filters.limit || 10,
-          totalPages: Math.ceil(result.total / (filters.limit || 10))
-        },
-        summary: {
-          totalValorFacturado: result.totalValorFacturado,
-          totalReconocido: result.totalReconocido,
-          totalPagado: result.totalPagado,
-          totalSaldoAdeudado: result.totalSaldoAdeudado
+    try {
+      const result = await this.flujoService.getFlujoIpsData(filters);
+      
+      // ✅ CAMBIAR ESTA ESTRUCTURA:
+      return {
+        success: true,
+        message: 'Datos de flujo IPS obtenidos exitosamente',
+        data: {  // ← AGREGAR UN OBJETO "data" QUE CONTENGA:
+          data: result.data,  // ← Los registros van en data.data
+          pagination: {
+            total: result.total,
+            page: filters.page || 1,
+            limit: filters.limit || 10,
+            totalPages: Math.ceil(result.total / (filters.limit || 10))
+          },
+          summary: {
+            totalValorFacturado: result.totalValorFacturado,
+            totalReconocido: result.totalReconocido,
+            totalPagado: result.totalPagado,
+            totalSaldoAdeudado: result.totalSaldoAdeudado
+          }
         }
-      }
-    };
-  } catch (error) {
-    console.error('❌ FlujoController: Error al obtener datos de flujo IPS:', error);
-    return {
-      success: false,
-      message: error.message,
-      data: null
-    };
+      };
+    } catch (error) {
+      console.error('❌ FlujoController: Error al obtener datos de flujo IPS:', error);
+      return {
+        success: false,
+        message: error.message,
+        data: null
+      };
+    }
   }
-}
 
   @Post('ips-data')
   async createFlujoIpsData(@Body() createDto: CreateFlujoIpsDataDto, @Request() req: any) {
@@ -147,6 +146,37 @@ async getFlujoIpsData(@Query() filters: FlujoFilterDto, @Request() req: any) {
       };
     } catch (error) {
       console.error('❌ FlujoController: Error al obtener datos de flujo EPS:', error);
+      return {
+        success: false,
+        message: error.message,
+        data: null
+      };
+    }
+  }
+
+  // ===============================================
+  // NUEVO: ENDPOINT PARA INFORMACIÓN ADRES-FLUJO
+  // ===============================================
+  @Get('eps-adres-info/:epsId')
+  async getEpsAdresInfo(
+    @Param('epsId') epsId: string,
+    @Request() req: any
+  ) {
+    console.log('🔍 FlujoController: GET /flujo/eps-adres-info/:epsId', {
+      user: req.user?.email || 'No user',
+      epsId
+    });
+
+    try {
+      const adresInfo = await this.flujoService.getEpsAdresInfo(epsId);
+      
+      return {
+        success: true,
+        message: 'Información de ADRES obtenida exitosamente',
+        data: adresInfo
+      };
+    } catch (error) {
+      console.error('❌ FlujoController: Error al obtener información de ADRES:', error);
       return {
         success: false,
         message: error.message,

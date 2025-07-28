@@ -1,4 +1,4 @@
-// frontend/src/App.tsx - VERSIÓN COMPLETA CON MÓDULO DE FLUJO
+// frontend/src/App.tsx - VERSIÓN COMPLETA CON MÓDULO DE ADRES INTEGRADO
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
@@ -6,7 +6,8 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { Layout } from './components/layout';
 import { Dashboard } from './components/dashboard/Dashboard';
 import InformacionCartera from './components/cartera/InformacionCartera';
-import { InformacionFlujo } from './components/flujo/InformacionFlujo'; // ✅ AGREGADO
+import { InformacionFlujo } from './components/flujo/InformacionFlujo';
+import { InformacionAdres } from './components/adres/InformacionAdres'; // ✅ COMPONENTE ADRES INTEGRADO
 import GestionEPS from './components/gestion/GestionEPS';
 import GestionIPS from './components/gestion/GestionIPS';
 import './App.css';
@@ -24,7 +25,8 @@ function App() {
               
               {/* Módulo de Carga de Información */}
               <Route path="/carga/cartera" element={<InformacionCartera />} />
-              <Route path="/carga/flujo" element={<InformacionFlujo />} /> {/* ✅ ACTUALIZADO */}
+              <Route path="/carga/flujo" element={<InformacionFlujo />} />
+              <Route path="/carga/adres" element={<InformacionAdres />} /> {/* ✅ RUTA ADRES ACTIVA */}
               
               {/* Módulo de Dashboards EPS */}
               <Route path="/dashboards/cartera/periodo" element={
@@ -65,12 +67,7 @@ function App() {
                   <p className="text-gray-600 mt-2">Módulo en desarrollo...</p>
                 </div>
               } />
-              <Route path="/base/adres" element={
-                <div className="p-6">
-                  <h1 className="text-2xl font-bold text-primary-900">Base ADRES</h1>
-                  <p className="text-gray-600 mt-2">Módulo en desarrollo...</p>
-                </div>
-              } />
+              <Route path="/base/adres" element={<InformacionAdres />} /> {/* ✅ COMPONENTE ADRES TAMBIÉN AQUÍ */}
               <Route path="/base/flujo" element={
                 <div className="p-6">
                   <h1 className="text-2xl font-bold text-primary-900">Base Flujo</h1>
