@@ -1,4 +1,4 @@
-// backend/src/main.ts
+// backend/src/main.ts - VERSIÓN CORREGIDA COMPLETA
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
@@ -6,21 +6,23 @@ import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Configurar CORS
+  // ✅ CONFIGURAR CORS COMPLETO (incluye las headers necesarias)
   app.enableCors({
     origin: ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'], // ✅ AGREGAR MÉTODOS
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'], // ✅ AGREGAR HEADERS
     credentials: true,
   });
 
   // Configurar ValidationPipe global con transformación
   app.useGlobalPipes(
     new ValidationPipe({
-      transform: true, // Importante: transforma los tipos automáticamente
+      transform: true,
       transformOptions: {
-        enableImplicitConversion: true, // Convierte strings a números/booleans automáticamente
+        enableImplicitConversion: true,
       },
-      whitelist: true, // Filtra propiedades no definidas en el DTO
-      forbidNonWhitelisted: true, // Rechaza propiedades no definidas
+      whitelist: true,
+      forbidNonWhitelisted: true,
     }),
   );
 

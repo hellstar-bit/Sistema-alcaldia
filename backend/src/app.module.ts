@@ -1,9 +1,10 @@
-// backend/src/app.module.ts - VERSIÓN ACTUALIZADA
+// backend/src/app.module.ts - VERSIÓN ACTUALIZADA CON FLUJO
 import { Module, OnModuleInit } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './modules/auth/auth.module';
 import { CarteraModule } from './modules/cartera/cartera.module';
+import { FlujoModule } from './modules/flujo/flujo.module'; // NUEVO
 import { AuthService } from './modules/auth/auth.service';
 import { CarteraService } from './modules/cartera/cartera.service';
 
@@ -23,7 +24,6 @@ import { CarteraService } from './modules/cartera/cartera.service';
       synchronize: process.env.NODE_ENV === 'development',
       logging: process.env.DB_LOGGING === 'true',
       
-      // Configuraciones mejoradas para MySQL
       charset: 'utf8mb4',
       timezone: '+00:00',
       ssl: false,
@@ -31,7 +31,6 @@ import { CarteraService } from './modules/cartera/cartera.service';
       extra: {
         connectionLimit: 10,
       },
-      
       
       retryAttempts: 3,
       retryDelay: 3000,
@@ -41,6 +40,7 @@ import { CarteraService } from './modules/cartera/cartera.service';
     }),
     AuthModule,
     CarteraModule,
+    FlujoModule, // AGREGADO
   ],
 })
 export class AppModule implements OnModuleInit {
@@ -53,13 +53,8 @@ export class AppModule implements OnModuleInit {
     try {
       console.log('🔧 Inicializando módulo principal...');
       
-      // Crear usuario administrador por defecto
       await this.authService.createDefaultAdmin();
-      
-      // Inicializar períodos
       await this.carteraService.initializePeriodos();
-      
-      // Inicializar datos básicos de EPS
       await this.initializeBasicData();
       
       console.log('✅ Módulo principal inicializado correctamente');
@@ -70,7 +65,6 @@ export class AppModule implements OnModuleInit {
 
   private async initializeBasicData() {
     try {
-      // Crear EPS básicas si no existen
       const basicEPS = [
         { codigo: 'COMPENSAR', nombre: 'COMPENSAR' },
         { codigo: 'COOSALUD', nombre: 'COOSALUD' },
@@ -86,7 +80,7 @@ export class AppModule implements OnModuleInit {
         await this.carteraService.findOrCreateEPS(epsData.nombre, epsData.codigo);
       }
 
-      console.log('✅ Datos básicos de EPS inicializados');
+      console.log('✅ Datos básicos inicializados');
     } catch (error) {
       console.error('❌ Error al inicializar datos básicos:', error);
     }

@@ -1,4 +1,4 @@
-// frontend/src/hooks/useSweetAlert.ts - VERSIÓN CORREGIDA
+// frontend/src/hooks/useSweetAlert.ts - VERSIÓN CORREGIDA CON ALIAS
 import Swal from 'sweetalert2';
 
 interface AlertOptions {
@@ -8,10 +8,10 @@ interface AlertOptions {
   confirmButtonText?: string;
   cancelButtonText?: string;
   showCancelButton?: boolean;
-  confirmButtonColor?: string;  // ← Añadido
-  cancelButtonColor?: string;   // ← Añadido
-  allowOutsideClick?: boolean;  // ← Añadido
-  allowEscapeKey?: boolean;     // ← Añadido
+  confirmButtonColor?: string;
+  cancelButtonColor?: string;
+  allowOutsideClick?: boolean;
+  allowEscapeKey?: boolean;
 }
 
 export const useSweetAlert = () => {
@@ -29,7 +29,6 @@ export const useSweetAlert = () => {
   };
 
   const showSuccess = (titleOrOptions: string | AlertOptions, options?: AlertOptions) => {
-    // Manejar sobrecarga de parámetros
     let finalOptions: AlertOptions;
     
     if (typeof titleOrOptions === 'string') {
@@ -107,6 +106,9 @@ export const useSweetAlert = () => {
     });
   };
 
+  // ✅ AGREGAR ALIAS showConfirmation
+  const showConfirmation = showConfirm;
+
   const showInfo = (options: AlertOptions) => {
     return Swal.fire({
       ...baseConfig,
@@ -145,6 +147,7 @@ export const useSweetAlert = () => {
     showError,
     showWarning,
     showConfirm,
+    showConfirmation, // ✅ AGREGAR AL RETURN
     showInfo,
     showLoading,
     close,
