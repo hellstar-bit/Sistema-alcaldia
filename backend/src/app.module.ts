@@ -1,4 +1,4 @@
-// backend/src/app.module.ts - USANDO CONFIGURACIÓN SEPARADA
+// backend/src/app.module.ts - SESSION POOLER CON FIX SCRAM
 import { Module, OnModuleInit } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -8,14 +8,69 @@ import { FlujoModule } from './modules/flujo/flujo.module';
 import { AdresModule } from './modules/adres/adres.module';
 import { AuthService } from './modules/auth/auth.service';
 import { CarteraService } from './modules/cartera/cartera.service';
-import { databaseConfig } from './config/database.config';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    TypeOrmModule.forRoot(databaseConfig),
+    TypeOrmModule.forRoot({
+      type: 'postgres',
+      
+      // Session Pooler con nueva contraseña
+      host: 'aws-0-us-east-1.pooler.supabase.com',
+      port: 5432,
+      username: 'postgres.knditzgnblymqvmnmbmc',
+      password: 'w3eEctJeKkBGhXuE', // Nueva contraseña
+      database: 'postgres',
+      
+      entities: [__dirname + '/**/*.entity{.ts,.js}'],
+      synchronize: true,
+      logging: false,
+      
+      // NO SSL para Session Pooler
+      ssl: false,
+      
+      // Configuración específica del pool para resolver SCRAM
+      extra: {
+        // Pool settings básicos
+        max: 3,
+        min: 1,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 10000,
+        acquireTimeoutMillis: 10000,
+        
+        // Configuración específica para SCRAM authentication
+        application_name: 'nestjs-cartera',
+        
+        // Configuraciones del cliente PostgreSQL
+        binary: false,  // Usar protocolo de texto, no binario
+        
+        // Configuración de autenticación
+        connect_timeout: 10,
+        
+        // Configuración de red
+        keepalive: true,
+        keepalives_idle: 600,
+        keepalives_interval: 30,
+        keepalives_count: 3,
+        
+        // Configuración específica para Supabase
+        options: '-c search_path=public',
+        
+        // Configuración de query
+        statement_timeout: 30000,
+        query_timeout: 30000,
+        
+        // Encoding
+        client_encoding: 'UTF8',
+      },
+      
+      retryAttempts: 3,
+      retryDelay: 2000,
+      autoLoadEntities: true,
+      maxQueryExecutionTime: 30000,
+    }),
     AuthModule,
     CarteraModule,
     FlujoModule,
@@ -30,46 +85,22 @@ export class AppModule implements OnModuleInit {
 
   async onModuleInit() {
     try {
-      console.log('🔧 Inicializando módulo principal...');
-      console.log('🔗 Conectando vía Transaction Pooler...');
-      console.log('📊 Host: aws-0-us-east-1.pooler.supabase.com:6543');
+      console.log('🔧 Inicializando aplicación...');
+      console.log('🔗 Conectando vía Session Pooler (con fix SCRAM)');
+      console.log('📊 Host: aws-0-us-east-1.pooler.supabase.com:5432');
       console.log('👤 Usuario: postgres.knditzgnblymqvmnmbmc');
       
-      // Esperar conexión inicial
-      console.log('⏳ Esperando conexión estable...');
-      await new Promise(resolve => setTimeout(resolve, 8000));
+      // Esperar un poco para la conexión inicial
+      await new Promise(resolve => setTimeout(resolve, 3000));
       
-      console.log('🔑 Creando usuario administrador...');
       await this.authService.createDefaultAdmin();
-      
-      console.log('📅 Inicializando períodos...');
       await this.carteraService.initializePeriodos();
-      
-      console.log('📋 Inicializando datos básicos...');
       await this.initializeBasicData();
       
-      console.log('✅ Módulo principal inicializado correctamente');
-      console.log('🚀 Aplicación lista en http://localhost:3001');
+      console.log('✅ ¡Aplicación lista en http://localhost:3001!');
     } catch (error) {
-      console.error('❌ Error al inicializar el módulo principal:');
-      console.error('📝 Mensaje:', error.message);
-      console.error('🔢 Código:', error.code);
-      console.error('📋 Tipo:', error.constructor.name);
-      
-      // Información adicional para debug
-      if (error.code === 'ECONNREFUSED') {
-        console.error('🔌 La conexión fue rechazada. Verifica:');
-        console.error('   - Host: aws-0-us-east-1.pooler.supabase.com');
-        console.error('   - Puerto: 6543');
-        console.error('   - Usuario: postgres.knditzgnblymqvmnmbmc');
-      }
-      
-      if (error.message?.includes('SCRAM')) {
-        console.error('🔐 Error de autenticación SCRAM. Verifica:');
-        console.error('   - Contraseña correcta');
-        console.error('   - Usuario con formato correcto');
-        console.error('   - Transaction Pooler habilitado en Supabase');
-      }
+      console.error('❌ Error:', error.message);
+      console.error('🔍 Código de error:', error.code);
     }
   }
 
@@ -89,10 +120,8 @@ export class AppModule implements OnModuleInit {
       for (const epsData of basicEPS) {
         await this.carteraService.findOrCreateEPS(epsData.nombre, epsData.codigo);
       }
-
-      console.log('✅ Datos básicos inicializados');
     } catch (error) {
-      console.error('❌ Error al inicializar datos básicos:', error);
+      console.error('Error inicializando datos:', error);
     }
   }
 }

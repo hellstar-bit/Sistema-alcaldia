@@ -1,25 +1,21 @@
-# render.yaml - Configuración para Render
+# render.yaml - Con nueva contraseña y Transaction Pooler para producción
 services:
   - type: web
     name: cartera-backend
     env: node
-    buildCommand: cd backend && npm install && npm run build
+    region: oregon
+    plan: free
+    buildCommand: cd backend && npm ci && npm run build
     startCommand: cd backend && npm run start:prod
     envVars:
       - key: NODE_ENV
         value: production
-      - key: DB_HOST
-        value: # Añadir desde Supabase Dashboard
-      - key: DB_PORT
-        value: 5432
-      - key: DB_USERNAME
-        value: postgres
-      - key: DB_PASSWORD
-        sync: false # Variable secreta
-      - key: DB_DATABASE
-        value: postgres
+      - key: DATABASE_URL
+        value: postgresql://postgres.knditzgnblymqvmnmbmc:w3eEctJeKkBGhXuE@aws-0-us-east-1.pooler.supabase.com:6543/postgres
       - key: JWT_SECRET
-        sync: false # Variable secreta
+        value: mi-super-clave-jwt-muy-segura-2024-cartera-barranquilla-produccion
       - key: PORT
-        value: 3001
+        value: 10000
     healthCheckPath: /health
+    autoDeploy: true
+    rootDir: .
