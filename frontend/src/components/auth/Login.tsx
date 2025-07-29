@@ -112,7 +112,7 @@ export const Login: React.FC = () => {
             <BuildingLibraryIcon className="w-10 h-10 sm:w-12 sm:h-12 text-primary-900" />
           </div>
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-2">
-            Sistema de Gestión Presupuestal
+            SIstema de gestión de cartera
           </h1>
           <p className="text-primary-100 text-sm sm:text-base">
             Alcaldía de Barranquilla - Sector Salud

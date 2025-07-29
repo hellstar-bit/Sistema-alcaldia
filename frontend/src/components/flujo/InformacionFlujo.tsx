@@ -426,92 +426,114 @@ export const InformacionFlujo: React.FC = () => {
         </div>
       </div>
 
-      {/* TABLA 1: Métricas Detalladas por EPS y Período - MOVIDA ARRIBA */}
-      {selectedEPS && (
-        <div className="bg-white rounded-xl shadow-elegant overflow-hidden">
-          <div className="bg-gradient-to-r from-purple-50 to-purple-100 px-6 py-4 border-b border-purple-200">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-purple-900 flex items-center">
-                <CurrencyDollarIcon className="w-5 h-5 mr-2" />
-                Métricas Detalladas por EPS y Período - {selectedEPS.nombre}
-              </h2>
-              <p className="text-sm text-purple-600">Datos UPC y valor girado por período</p>
-            </div>
-          </div>
+      {/* TABLA 1: Métricas Detalladas por EPS y Período - CON NUEVOS CAMPOS */}
+{selectedEPS && (
+  <div className="bg-white rounded-xl shadow-elegant overflow-hidden">
+    <div className="bg-gradient-to-r from-purple-50 to-purple-100 px-6 py-4 border-b border-purple-200">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-purple-900 flex items-center">
+          <CurrencyDollarIcon className="w-5 h-5 mr-2" />
+          Métricas Detalladas por EPS y Período - {selectedEPS.nombre}
+        </h2>
+        <p className="text-sm text-purple-600">Datos UPC, valor girado, pagos y cumplimiento por período</p>
+      </div>
+    </div>
 
-          <div className="overflow-x-auto">
-            {loadingAdresInfo ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
-                  <p className="text-gray-600">Cargando métricas detalladas...</p>
-                </div>
-              </div>
-            ) : epsAdresInfo.length > 0 ? (
-              <table className="min-w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      EPS
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Período
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      UPC
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      92% UPC
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      60% UPC
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Valor Girado
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {epsAdresInfo.map((item, index) => (
-                    <tr key={index} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {item.eps}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {item.periodo}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
-                        {flujoUtils.formatCurrency(item.upc)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
-                        <span className="text-green-600 font-medium">
-                          {flujoUtils.formatCurrency(item.upc92)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
-                        <span className="text-blue-600 font-medium">
-                          {flujoUtils.formatCurrency(item.upc60)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
-                        {flujoUtils.formatCurrency(item.valorGirado)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <div className="text-center py-12">
-                <ClockIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No hay métricas disponibles</h3>
-                <p className="text-gray-600">
-                  No se encontraron datos de ADRES para la EPS seleccionada
-                </p>
-              </div>
-            )}
+    <div className="overflow-x-auto">
+      {loadingAdresInfo ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Cargando métricas detalladas...</p>
           </div>
         </div>
+      ) : epsAdresInfo.length > 0 ? (
+        <table className="min-w-full">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                EPS
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Período
+              </th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                UPC
+              </th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                92% UPC
+              </th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                60% UPC
+              </th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Valor Girado
+              </th>
+              {/* NUEVAS COLUMNAS */}
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Pagos
+              </th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Cumplimiento Pagos
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {epsAdresInfo.map((item, index) => (
+              <tr key={index} className="hover:bg-gray-50">
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  {item.eps}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {item.periodo}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
+                  {flujoUtils.formatCurrency(item.upc)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
+                  <span className="text-green-600 font-medium">
+                    {flujoUtils.formatCurrency(item.upc92)}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
+                  <span className="text-blue-600 font-medium">
+                    {flujoUtils.formatCurrency(item.upc60)}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
+                  {flujoUtils.formatCurrency(item.valorGirado)}
+                </td>
+                {/* NUEVAS CELDAS */}
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
+                  <span className="text-indigo-600 font-medium">
+                    {flujoUtils.formatCurrency(item.pagos)}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
+                  <span className={`font-medium ${
+                    (item.cumplimientoPagos ?? 0) >= 80 ? 'text-green-600' : 
+                    (item.cumplimientoPagos ?? 0) >= 50 ? 'text-yellow-600' : 
+                    'text-red-600'
+                  }`}>
+                    {item.cumplimientoPagos != null ? item.cumplimientoPagos.toFixed(2) : '0.00'}%
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <div className="text-center py-12">
+          <ClockIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No hay métricas disponibles</h3>
+          <p className="text-gray-600">
+            No se encontraron datos de ADRES para la EPS seleccionada
+          </p>
+        </div>
       )}
+    </div>
+  </div>
+)}
 
       {/* TABLA 2: Control de Carga - AHORA ESTÁ DESPUÉS DE MÉTRICAS */}
       <div className="bg-white rounded-xl shadow-elegant overflow-hidden">

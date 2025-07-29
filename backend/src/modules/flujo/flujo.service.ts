@@ -267,53 +267,103 @@ export class FlujoService {
   // NUEVO: MÉTODOS PARA INFORMACIÓN ADRES-FLUJO
   // ===============================================
   async getEpsAdresInfo(epsId: string): Promise<Array<{
-    eps: string;
-    periodo: string;
-    upc: number;
-    upc92: number;
-    upc60: number;
-    valorGirado: number;
-  }>> {
-    console.log('🔍 FlujoService: getEpsAdresInfo - Obteniendo información de ADRES para EPS:', epsId);
+  eps: string;
+  periodo: string;
+  upc: number;
+  upc92: number;
+  upc60: number;
+  valorGirado: number;
+  pagos: number;
+  cumplimientoPagos: number;
+}>> {
+  console.log('🔍 FlujoService: getEpsAdresInfo - Obteniendo información de ADRES para EPS:', epsId);
 
-    try {
-      // Primero verificar que la EPS existe
-      const eps = await this.epsRepository.findOne({ where: { id: epsId } });
-      if (!eps) {
-        throw new BadRequestException('EPS no encontrada');
-      }
-
-      // Consultar datos de ADRES para esta EPS
-      const adresData = await this.adresDataRepository
-        .createQueryBuilder('adres')
-        .leftJoinAndSelect('adres.eps', 'eps')
-        .leftJoinAndSelect('adres.periodo', 'periodo')
-        .where('adres.epsId = :epsId', { epsId })
-        .andWhere('adres.activo = :activo', { activo: true })
-        .orderBy('periodo.year', 'DESC')
-        .addOrderBy('periodo.mes', 'DESC')
-        .getMany();
-
-      console.log(`📊 FlujoService: Encontrados ${adresData.length} registros de ADRES para la EPS`);
-
-      // Transformar los datos al formato requerido
-      const result = adresData.map(item => ({
-        eps: item.eps.nombre,
-        periodo: `${item.periodo.nombre} ${item.periodo.year}`,
-        upc: item.upc,
-        upc92: Math.round(item.upc * 0.92 * 100) / 100, // 92% del UPC
-        upc60: Math.round(item.upc * 0.60 * 100) / 100, // 60% del UPC
-        valorGirado: item.valorGirado
-      }));
-
-      console.log('✅ FlujoService: Información de ADRES procesada exitosamente');
-      return result;
-
-    } catch (error) {
-      console.error('❌ FlujoService: Error en getEpsAdresInfo:', error);
-      throw new BadRequestException(`Error al obtener información de ADRES: ${error.message}`);
+  try {
+    // Primero verificar que la EPS existe
+    const eps = await this.epsRepository.findOne({ where: { id: epsId } });
+    if (!eps) {
+      throw new BadRequestException('EPS no encontrada');
     }
+
+    // Consultar datos de ADRES para esta EPS
+    const adresData = await this.adresDataRepository
+      .createQueryBuilder('adres')
+      .leftJoinAndSelect('adres.eps', 'eps')
+      .leftJoinAndSelect('adres.periodo', 'periodo')
+      .where('adres.epsId = :epsId', { epsId })
+      .andWhere('adres.activo = :activo', { activo: true })
+      .orderBy('periodo.year', 'DESC')
+      .addOrderBy('periodo.mes', 'DESC')
+      .getMany();
+
+    console.log(`📊 FlujoService: Encontrados ${adresData.length} registros de ADRES para la EPS`);
+
+    // Para cada período de ADRES, calcular los pagos desde flujo IPS
+    const result = await Promise.all(
+      adresData.map(async (item) => {
+        console.log(`🔍 Procesando período: ${item.periodo.nombre} ${item.periodo.year} para EPS ID: ${epsId}`);
+        
+        // Buscar datos de flujo IPS para esta EPS y período
+        const flujoIpsData = await this.flujoIpsDataRepository
+          .createQueryBuilder('flujoIps')
+          .leftJoin('flujoIps.controlCarga', 'control')
+          .select([
+            'flujoIps.valorPagado'
+          ])
+          .where('control.epsId = :epsId', { epsId })
+          .andWhere('control.periodoId = :periodoId', { periodoId: item.periodo.id })
+          .andWhere('flujoIps.activo = :activo', { activo: true })
+          .getRawMany();
+
+        console.log(`💰 Registros de flujo IPS encontrados para período ${item.periodo.nombre}:`, flujoIpsData.length);
+        console.log(`💰 Datos de flujo IPS:`, flujoIpsData);
+
+        // Calcular la suma de pagos con validación robusta
+        let totalPagos = 0;
+        
+        if (flujoIpsData && flujoIpsData.length > 0) {
+          totalPagos = flujoIpsData.reduce((sum, flujoItem) => {
+            const valorPagado = parseFloat(flujoItem.flujoIps_valorPagado) || 0;
+            console.log(`💰 Sumando valor pagado: ${valorPagado}`);
+            return sum + valorPagado;
+          }, 0);
+        }
+
+        console.log(`💰 Total pagos calculado para período ${item.periodo.nombre}: ${totalPagos}`);
+
+        // Calcular el 92% del UPC con validación
+        const upcValue = parseFloat(item.upc.toString()) || 0;
+        const upc92 = Math.round(upcValue * 0.92 * 100) / 100;
+        
+        // Calcular el cumplimiento de pagos (porcentaje) con validación
+        let cumplimientoPagos = 0;
+        if (upc92 > 0 && !isNaN(totalPagos) && totalPagos >= 0) {
+          cumplimientoPagos = Math.round((totalPagos / upc92) * 100 * 100) / 100;
+        }
+
+        console.log(`📊 Período ${item.periodo.nombre}: UPC=${upcValue}, UPC92=${upc92}, Pagos=${totalPagos}, Cumplimiento=${cumplimientoPagos}%`);
+
+        return {
+          eps: item.eps.nombre,
+          periodo: `${item.periodo.nombre} ${item.periodo.year}`,
+          upc: upcValue,
+          upc92: upc92,
+          upc60: Math.round(upcValue * 0.60 * 100) / 100,
+          valorGirado: parseFloat(item.valorGirado.toString()) || 0,
+          pagos: isNaN(totalPagos) ? 0 : totalPagos, // ✅ VALIDACIÓN ANTI-NaN
+          cumplimientoPagos: isNaN(cumplimientoPagos) ? 0 : cumplimientoPagos // ✅ VALIDACIÓN ANTI-NaN
+        };
+      })
+    );
+
+    console.log('✅ FlujoService: Información de ADRES con pagos procesada exitosamente');
+    return result;
+
+  } catch (error) {
+    console.error('❌ FlujoService: Error en getEpsAdresInfo:', error);
+    throw new BadRequestException(`Error al obtener información de ADRES: ${error.message}`);
   }
+}
 
   // ===============================================
   // MÉTODOS PARA EXCEL

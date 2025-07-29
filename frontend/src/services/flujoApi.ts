@@ -51,6 +51,17 @@ export interface FlujoIpsData {
   updatedAt: string;
 }
 
+export interface EpsAdresInfo {
+  eps: string;
+  periodo: string;
+  upc: number;
+  upc92: number;
+  upc60: number;
+  valorGirado: number;
+  pagos: number;              // NUEVO CAMPO
+  cumplimientoPagos: number;  // NUEVO CAMPO
+}
+
 export interface FlujoEpsData {
   id: string;
   controlCarga: FlujoControlCarga;

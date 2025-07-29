@@ -300,7 +300,7 @@ export const Dashboard: React.FC = () => {
               </h1>
             </div>
             <p className="text-primary-100 text-sm sm:text-base mb-2">
-              Bienvenido al Sistema de Gestión Presupuestal - Alcaldía de Barranquilla
+              Bienvenido al SIstema de gestión de cartera - Alcaldía de Barranquilla
             </p>
             <div className="flex items-center space-x-4 text-xs sm:text-sm text-primary-200">
               <span>📅 {new Date().toLocaleDateString('es-CO', { 
