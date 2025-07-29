@@ -10,7 +10,7 @@ console.log('🌍 Environment:', import.meta.env.VITE_ENV);
 // Crear instancia de axios
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000, // Aumentar timeout para Render (servicios gratuitos pueden ser lentos)
+  timeout: 300000, // Aumentar timeout para Render (servicios gratuitos pueden ser lentos)
   headers: {
     'Content-Type': 'application/json',
   },

@@ -43,7 +43,7 @@ export const databaseConfig: TypeOrmModuleOptions = {
     statement_timeout: 300000,
     
     // Configuración de transacciones
-    idle_in_transaction_session_timeout: 30000,
+    idle_in_transaction_session_timeout: 300000,
     
     // Encoding
     client_encoding: 'UTF8',
