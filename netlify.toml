@@ -1,8 +1,10 @@
 # netlify.toml - Configuración para Netlify
+# UBICACIÓN: raíz del proyecto (mismo nivel que backend/ y frontend/)
+
 [build]
   base = "frontend"
-  publish = "dist"
-  command = "npm run build"
+  publish = "frontend/dist"
+  command = "cd frontend && npm ci && npm run build"
 
 # Configuración para SPA (Single Page Application)
 [[redirects]]
@@ -24,3 +26,15 @@
   for = "/assets/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
+
+# Variables de entorno para el build
+[build.environment]
+  NODE_VERSION = "18"
+  NPM_VERSION = "9"
+
+# Configuración para el frontend
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # CORS para desarrollo (si es necesario)
+    Access-Control-Allow-Origin = "*"
