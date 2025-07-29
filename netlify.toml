@@ -4,7 +4,7 @@
 [build]
   base = "frontend"
   publish = "frontend/dist"
-  command = "cd frontend && npm ci && npm run build"
+  command = " npm ci && npm run build"
 
 # Configuración para SPA (Single Page Application)
 [[redirects]]
