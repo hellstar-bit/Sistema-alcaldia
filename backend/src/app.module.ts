@@ -6,6 +6,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { CarteraModule } from './modules/cartera/cartera.module';
 import { FlujoModule } from './modules/flujo/flujo.module';
 import { AdresModule } from './modules/adres/adres.module';
+import { HealthModule } from './health/health.module'; // ✅ AGREGADO
 import { AuthService } from './modules/auth/auth.service';
 import { CarteraService } from './modules/cartera/cartera.service';
 
@@ -17,52 +18,38 @@ import { CarteraService } from './modules/cartera/cartera.service';
     TypeOrmModule.forRoot({
       type: 'postgres',
       
-      // Session Pooler con nueva contraseña
-      host: 'aws-0-us-east-1.pooler.supabase.com',
-      port: 5432,
+      // Para producción usará Transaction Pooler, para desarrollo Session Pooler
+      host: process.env.NODE_ENV === 'production' 
+        ? 'aws-0-us-east-1.pooler.supabase.com'
+        : 'aws-0-us-east-1.pooler.supabase.com',
+      port: process.env.NODE_ENV === 'production' ? 6543 : 5432, // Transaction en prod, Session en dev
       username: 'postgres.knditzgnblymqvmnmbmc',
-      password: 'w3eEctJeKkBGhXuE', // Nueva contraseña
+      password: 'w3eEctJeKkBGhXuE',
       database: 'postgres',
       
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      synchronize: true,
+      synchronize: process.env.NODE_ENV === 'development', // Solo en desarrollo
       logging: false,
       
-      // NO SSL para Session Pooler
       ssl: false,
       
-      // Configuración específica del pool para resolver SCRAM
       extra: {
-        // Pool settings básicos
-        max: 3,
+        max: process.env.NODE_ENV === 'production' ? 3 : 2,
         min: 1,
         idleTimeoutMillis: 30000,
         connectionTimeoutMillis: 10000,
         acquireTimeoutMillis: 10000,
         
-        // Configuración específica para SCRAM authentication
         application_name: 'nestjs-cartera',
-        
-        // Configuraciones del cliente PostgreSQL
-        binary: false,  // Usar protocolo de texto, no binario
-        
-        // Configuración de autenticación
+        binary: false,
         connect_timeout: 10,
-        
-        // Configuración de red
         keepalive: true,
         keepalives_idle: 600,
         keepalives_interval: 30,
         keepalives_count: 3,
-        
-        // Configuración específica para Supabase
         options: '-c search_path=public',
-        
-        // Configuración de query
         statement_timeout: 30000,
         query_timeout: 30000,
-        
-        // Encoding
         client_encoding: 'UTF8',
       },
       
@@ -75,6 +62,7 @@ import { CarteraService } from './modules/cartera/cartera.service';
     CarteraModule,
     FlujoModule,
     AdresModule,
+    HealthModule, // ✅ AGREGADO
   ],
 })
 export class AppModule implements OnModuleInit {
@@ -86,18 +74,22 @@ export class AppModule implements OnModuleInit {
   async onModuleInit() {
     try {
       console.log('🔧 Inicializando aplicación...');
-      console.log('🔗 Conectando vía Session Pooler (con fix SCRAM)');
-      console.log('📊 Host: aws-0-us-east-1.pooler.supabase.com:5432');
+      console.log('🌍 Ambiente:', process.env.NODE_ENV);
+      console.log('🔗 Conectando vía', process.env.NODE_ENV === 'production' ? 'Transaction Pooler' : 'Session Pooler');
+      console.log('📊 Host: aws-0-us-east-1.pooler.supabase.com');
       console.log('👤 Usuario: postgres.knditzgnblymqvmnmbmc');
       
-      // Esperar un poco para la conexión inicial
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Solo esperar en desarrollo
+      if (process.env.NODE_ENV === 'development') {
+        await new Promise(resolve => setTimeout(resolve, 3000));
+      }
       
       await this.authService.createDefaultAdmin();
       await this.carteraService.initializePeriodos();
       await this.initializeBasicData();
       
-      console.log('✅ ¡Aplicación lista en http://localhost:3001!');
+      const port = process.env.PORT || 3001;
+      console.log(`✅ ¡Aplicación lista en puerto ${port}!`);
     } catch (error) {
       console.error('❌ Error:', error.message);
       console.error('🔍 Código de error:', error.code);
