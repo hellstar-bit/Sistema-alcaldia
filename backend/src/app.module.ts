@@ -36,7 +36,7 @@ import { CarteraService } from './modules/cartera/cartera.service';
       extra: {
         max: process.env.NODE_ENV === 'production' ? 3 : 2,
         min: 1,
-        idleTimeoutMillis: 30000,
+        idleTimeoutMillis: 100000,
         connectionTimeoutMillis: 10000,
         acquireTimeoutMillis: 10000,
         
@@ -48,15 +48,15 @@ import { CarteraService } from './modules/cartera/cartera.service';
         keepalives_interval: 30,
         keepalives_count: 3,
         options: '-c search_path=public',
-        statement_timeout: 30000,
-        query_timeout: 30000,
+        statement_timeout: 100000,
+        query_timeout: 100000,
         client_encoding: 'UTF8',
       },
       
       retryAttempts: 3,
       retryDelay: 2000,
       autoLoadEntities: true,
-      maxQueryExecutionTime: 30000,
+      maxQueryExecutionTime: 100000,
     }),
     AuthModule,
     CarteraModule,

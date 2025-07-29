@@ -27,7 +27,7 @@ export const databaseConfig: TypeOrmModuleOptions = {
     // Pool configuration optimizado para Transaction Pooler
     max: 2,                        // Solo 2 conexiones máximo
     min: 1,                        // 1 conexión mínimo
-    idleTimeoutMillis: 30000,      // 30 segundos idle
+    idleTimeoutMillis: 100000,      // 30 segundos idle
     connectionTimeoutMillis: 15000, // 15 segundos timeout
     acquireTimeoutMillis: 15000,    // 15 segundos para adquirir conexión
     
@@ -39,8 +39,8 @@ export const databaseConfig: TypeOrmModuleOptions = {
     keepAliveInitialDelayMillis: 10000,
     
     // Timeouts de query
-    query_timeout: 30000,
-    statement_timeout: 30000,
+    query_timeout: 10000,
+    statement_timeout: 300000,
     
     // Configuración de transacciones
     idle_in_transaction_session_timeout: 30000,
