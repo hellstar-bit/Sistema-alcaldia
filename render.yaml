@@ -1,0 +1,25 @@
+# render.yaml - Configuración para Render
+services:
+  - type: web
+    name: cartera-backend
+    env: node
+    buildCommand: cd backend && npm install && npm run build
+    startCommand: cd backend && npm run start:prod
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_HOST
+        value: # Añadir desde Supabase Dashboard
+      - key: DB_PORT
+        value: 5432
+      - key: DB_USERNAME
+        value: postgres
+      - key: DB_PASSWORD
+        sync: false # Variable secreta
+      - key: DB_DATABASE
+        value: postgres
+      - key: JWT_SECRET
+        sync: false # Variable secreta
+      - key: PORT
+        value: 3001
+    healthCheckPath: /health
