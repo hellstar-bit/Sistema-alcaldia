@@ -8,7 +8,7 @@ async function bootstrap() {
 
   // ✅ CONFIGURAR CORS COMPLETO (incluye las headers necesarias)
   app.enableCors({
-    origin: ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174'],
+    origin: ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174', 'https://sistema-alcaldia.netlify.app'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'], // ✅ AGREGAR MÉTODOS
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'], // ✅ AGREGAR HEADERS
     credentials: true,
