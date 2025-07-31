@@ -34,6 +34,7 @@ import { useSweetAlert } from '../../hooks/useSweetAlert';
 const { showSuccess, showError, showLoading, close, showConfirm } = useSweetAlert();
 
 
+
 const MESES_ANIO = [
   { numero: 1, nombre: 'ENERO', abrev: 'ENE' },
   { numero: 2, nombre: 'FEBRERO', abrev: 'FEB' },
@@ -59,8 +60,7 @@ const InformacionCartera: React.FC = () => {
   const [selectedEPS, setSelectedEPS] = useState<EPS | null>(null);
   const [selectedPeriodo, setSelectedPeriodo] = useState<Periodo | null>(null);
   const [carteraData, setCarteraData] = useState<CarteraData[]>([]);
-  const [epsPeriosoStatus, setEpsPeriodoStatus] = useState<EPSPeriodoStatus[]>([]);
-  
+  const [epsPeriodoStatus, setEpsPeriodoStatus] = useState<EPSPeriodoStatus[]>([]);  
   // Estados de UI
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -71,7 +71,6 @@ const InformacionCartera: React.FC = () => {
   const [showUploadModal, setShowUploadModal] = useState(false);
 
   // Hook de Sweet Alert
-  const { showSuccess, showError, showLoading, close } = useSweetAlert();
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -132,6 +131,7 @@ const InformacionCartera: React.FC = () => {
       setInitialLoading(false);
     }
   };
+  
 
   const updateLocalEPSPeriodoStatus = (epsId: string, periodoId: string, hasData: boolean) => {
   setEpsPeriodoStatus(prevStatus => {
@@ -232,8 +232,8 @@ const InformacionCartera: React.FC = () => {
     }
   }
 };
-  const getEPSPeriodoStatus = (epsId: string, periodoId: string): boolean => {
-  return carteraUtils.hasDataForPeriod(epsPeriosoStatus, epsId, periodoId);
+  const getEPSPeriodoStatus = (epsId: string, periodoId: string): EPSPeriodoStatus | undefined => {
+  return epsPeriodoStatus.find(item => item.epsId === epsId && item.periodoId === periodoId);
 };
 
 
@@ -414,24 +414,13 @@ const InformacionCartera: React.FC = () => {
   const hasDataForEPSYearMonth = (epsId: string, year: number, mes: number): boolean => {
   const periodo = findPeriodoByYearAndMonth(year, mes);
   if (!periodo) {
-    console.log(`🔍 DEBUG: No periodo found for ${year}-${mes}`);
     return false;
   }
   
-   const hasData = carteraUtils.hasDataForPeriod(epsPeriosoStatus, epsId, periodo.id);
-  
-  console.log(`🔍 DEBUG: hasDataForEPSYearMonth`, {
-    epsId,
-    year,
-    mes,
-    periodoId: periodo.id,
-    hasData,
-    statusLength: epsPeriosoStatus.length,
-    relevantStatus: epsPeriosoStatus.filter(s => s.epsId === epsId && s.periodoId === periodo.id)
-  });
-  
-  return hasData;
+  const status = getEPSPeriodoStatus(epsId, periodo.id);
+  return status?.tieneData || false;
 };
+
 
 
   const getAvailableYears = (): number[] => {
@@ -440,12 +429,19 @@ const InformacionCartera: React.FC = () => {
   };
 
   const hasDataForPeriod = (epsId: string, periodoId: string): boolean => {
-    return carteraUtils.hasDataForPeriod(epsPeriosoStatus, epsId, periodoId);
-  };
+  const status = getEPSPeriodoStatus(epsId, periodoId);
+  return status?.tieneData || false;
+};
 
   const getAvailablePeriodsForEPS = (epsId: string): Periodo[] => {
-    return carteraUtils.getAvailablePeriodsForEPS(periodosList, epsPeriosoStatus, epsId);
-  };
+  return periodosList.filter(periodo => {
+    const status = getEPSPeriodoStatus(epsId, periodo.id);
+    return status?.tieneData;
+  }).sort((a, b) => {
+    if (a.year !== b.year) return b.year - a.year;
+    return b.mes - a.mes;
+  });
+};
 
   // *** MANEJADORES DE EVENTOS ***
 
@@ -696,168 +692,184 @@ const InformacionCartera: React.FC = () => {
         </div>
       </div>
 
-      {/* Tabla Principal: EPS vs 12 Meses */}
-        <div className="card p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center">
-                <TableCellsIcon className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-primary-900">Control de Carga {selectedYear}</h2>
-                <p className="text-gray-600 text-sm">Estado de información por EPS y mes del año</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <div className="flex items-center space-x-2 text-xs text-gray-600 bg-gray-50 px-3 py-2 rounded-lg">
-                <CheckCircleSolid className="w-4 h-4 text-success-600" />
-                <span>Con datos</span>
-              </div>
-              <div className="flex items-center space-x-2 text-xs text-gray-600 bg-gray-50 px-3 py-2 rounded-lg">
-                <XCircleSolid className="w-4 h-4 text-danger-600" />
-                <span>Sin datos</span>
-              </div>
-            </div>
-          </div>
+      <div className="card p-6">
+  <div className="flex items-center justify-between mb-6">
+    <div className="flex items-center space-x-3">
+      <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center">
+        <TableCellsIcon className="w-5 h-5 text-white" />
+      </div>
+      <div>
+        <h2 className="text-xl font-bold text-primary-900">Control de Carga {selectedYear}</h2>
+        <p className="text-gray-600 text-sm">Estado de información por EPS y período</p>
+      </div>
+    </div>
+    
+    <div className="flex items-center space-x-4">
+      {/* Selector de año */}
+      <select 
+        value={selectedYear} 
+        onChange={(e) => setSelectedYear(Number(e.target.value))}
+        className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+      >
+        {Array.from({length: 5}, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
+          <option key={year} value={year}>{year}</option>
+        ))}
+      </select>
 
-          <div className="overflow-x-auto">
-            <table className="min-w-full table-fixed">
-              <colgroup>
-                <col className="w-80" />
-                {MESES_ANIO.map((mes) => (
-                  <col key={mes.numero} className="w-24" />
-                ))}
-                <col className="w-36" />
-              </colgroup>
-              <thead>
-                <tr className="bg-gradient-to-r from-primary-900 to-primary-800">
-                  <th className="table-header text-left py-4 px-6 rounded-l-lg">
-                    <div className="flex items-center space-x-2">
-                      <BuildingOfficeIcon className="w-4 h-4" />
-                      <span>EPS</span>
-                    </div>
-                  </th>
-                  {MESES_ANIO.map((mes) => (
-                    <th key={mes.numero} className="table-header text-center py-4 px-4">
-                      <div className="flex flex-col items-center space-y-1">
-                        <span className="text-xs font-bold">{mes.abrev}</span>
-                        <span className="text-xs opacity-80">{mes.numero}</span>
-                      </div>
-                    </th>
-                  ))}
-                  <th className="table-header text-center py-4 px-6 rounded-r-lg">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {epsList.map((eps) => (
-                  <tr 
-                    key={eps.id} 
-                    className={`table-row ${selectedEPS?.id === eps.id ? 'bg-primary-50 border-l-4 border-primary-500' : ''}`}
-                  >
-                    <td 
-                      className="table-cell px-6 py-4 cursor-pointer"
-                      onClick={() => handleEPSSelect(eps)}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-3 h-3 rounded-full ${eps.activa ? 'bg-success-500' : 'bg-gray-400'}`} />
-                        <div>
-                          <div className="font-medium text-primary-900">{eps.nombre}</div>
-                          <div className="text-xs text-gray-500">{eps.codigo}</div>
-                        </div>
-                      </div>
-                    </td>
-                    
-                    {MESES_ANIO.map((mes) => {
-                      const periodo = periodosList.find(p => p.mes === mes.numero && p.year === selectedYear);
-                      const hasData = periodo ? getEPSPeriodoStatus(eps.id, periodo.id) : false;
-                      
-                      return (
-                        <td 
-                          key={mes.numero} 
-                          className="table-cell text-center py-4 px-4 cursor-pointer"
-                          onClick={() => {
-                            if (periodo) {
-                              handleCellClick(eps, periodo);
-                            }
-                          }}
-                        >
-                          <div className="flex items-center justify-center">
-                            {hasData ? (
-                              <div className="relative group">
-                                <CheckCircleSolid className="w-6 h-6 text-success-600 hover:text-success-700 transition-colors" />
-                                {/* Tooltip con información */}
-                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
-                                  Con datos - Click para ver
-                                </div>
-                              </div>
-                            ) : (
-                              <XCircleSolid className="w-6 h-6 text-danger-600 hover:text-danger-700 transition-colors" />
-                            )}
-                          </div>
-                        </td>
-                      );
-                    })}
-                    
-                    <td className="table-cell text-center py-4 px-6">
-                      <div className="flex items-center justify-center space-x-2">
-                        <button
-                          onClick={() => handleEPSSelect(eps)}
-                          className="btn-sm btn-primary"
-                          title="Seleccionar EPS"
-                        >
-                          Seleccionar
-                        </button>
-                        
-                        {/* Dropdown para acciones de períodos con datos */}
-                        {periodosList.some(periodo => getEPSPeriodoStatus(eps.id, periodo.id)) && (
-                          <div className="relative group">
-                            <button
-                              className="btn-sm btn-danger flex items-center space-x-1"
-                              title="Eliminar datos de períodos"
-                            >
-                              <TrashIcon className="w-4 h-4" />
-                              <ChevronDownIcon className="w-3 h-3" />
-                            </button>
-                            
-                            {/* Menu desplegable */}
-                            <div className="absolute right-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-20">
-                              <div className="p-2">
-                                <div className="text-xs font-medium text-gray-500 mb-2 px-2">
-                                  Eliminar datos por período:
-                                </div>
-                                {MESES_ANIO.map((mes) => {
-                                  const periodo = periodosList.find(p => p.mes === mes.numero && p.year === selectedYear);
-                                  const hasData = periodo ? getEPSPeriodoStatus(eps.id, periodo.id) : false;
-                                  
-                                  if (!hasData || !periodo) return null;
-                                  
-                                  return (
-                                    <button
-                                      key={mes.numero}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDeletePeriodoData(eps, periodo);
-                                      }}
-                                      className="w-full text-left px-3 py-2 text-sm text-danger-600 hover:bg-danger-50 rounded-md transition-colors flex items-center justify-between"
-                                    >
-                                      <span>{mes.nombre} {selectedYear}</span>
-                                      <TrashIcon className="w-4 h-4" />
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      {/* Leyenda visual */}
+      <div className="flex items-center space-x-2 text-sm text-gray-600">
+        <div className="flex items-center space-x-1">
+          <div className="w-3 h-3 bg-green-100 border border-green-300 rounded"></div>
+          <span>Con datos</span>
         </div>
+        <div className="flex items-center space-x-1">
+          <div className="w-3 h-3 bg-gray-100 border border-gray-300 rounded"></div>
+          <span>Sin datos</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div className="overflow-x-auto">
+    <table className="min-w-full">
+      <thead className="bg-gray-50">
+        <tr>
+          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10">
+            EPS
+          </th>
+          {MESES_ANIO.map((mes) => (
+            <th key={mes.numero} className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">
+              <div className="flex flex-col items-center">
+                <span className="font-bold">{mes.abrev}</span>
+                <span className="text-xs">{mes.numero}</span>
+              </div>
+            </th>
+          ))}
+          <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+            Acciones
+          </th>
+        </tr>
+      </thead>
+      <tbody className="bg-white divide-y divide-gray-200">
+        {epsList.map((eps) => (
+          <tr key={eps.id} className="hover:bg-gray-50">
+            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 sticky left-0 bg-white z-10">
+              <div className="flex items-center">
+                <div className={`w-2 h-2 rounded-full mr-3 ${eps.activa ? 'bg-green-400' : 'bg-gray-400'}`}></div>
+                <div>
+                  <div className="font-medium">{eps.nombre}</div>
+                  <div className="text-xs text-gray-500">{eps.codigo}</div>
+                </div>
+              </div>
+            </td>
+            
+            {MESES_ANIO.map((mes) => {
+              const periodo = periodosList.find(p => p.mes === mes.numero && p.year === selectedYear);
+              const statusData = periodo ? getEPSPeriodoStatus(eps.id, periodo.id) : undefined;
+              const hasData = statusData?.tieneData || false;
+              const isSelected = selectedEPS?.id === eps.id && selectedPeriodo?.id === periodo?.id;
+              
+              return (
+                <td key={mes.numero} className="px-3 py-4 text-center">
+                  <button
+                    onClick={() => {
+                      if (periodo) {
+                        handleCellClick(eps, periodo);
+                      }
+                    }}
+                    disabled={!periodo}
+                    className={`w-full h-12 rounded-lg border-2 transition-all duration-200 relative group ${
+                      isSelected
+                        ? 'border-blue-500 bg-blue-100'
+                        : hasData
+                        ? 'border-green-300 bg-green-50 hover:border-green-500 hover:bg-green-100'
+                        : 'border-gray-200 bg-gray-50 hover:border-gray-400 hover:bg-gray-100'
+                    } ${!periodo ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                  >
+                    {hasData ? (
+                      <div className="flex flex-col items-center justify-center h-full">
+                        <CheckCircleIcon className="w-4 h-4 text-green-600 mb-1" />
+                        <span className="text-xs font-medium text-green-800">
+                          {statusData?.totalRegistros || 0}
+                        </span>
+                      </div>
+                    ) : periodo ? (
+                      <div className="flex items-center justify-center h-full">
+                        <XCircleIcon className="w-4 h-4 text-gray-400" />
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <span className="text-gray-300 text-xs">N/A</span>
+                      </div>
+                    )}
+                    
+                    {/* Tooltip */}
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20">
+                      {hasData ? `${statusData?.totalRegistros || 0} registros` : 'Sin datos'}
+                    </div>
+                  </button>
+                </td>
+              );
+            })}
+            
+            <td className="px-6 py-4 text-center">
+              <div className="flex items-center justify-center space-x-2">
+                <button
+                  onClick={() => handleEPSSelect(eps)}
+                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                >
+                  Seleccionar
+                </button>
+                
+                {/* Dropdown para eliminar datos por período */}
+                {periodosList.some(periodo => {
+                  const status = getEPSPeriodoStatus(eps.id, periodo.id);
+                  return status?.tieneData;
+                }) && (
+                  <div className="relative group">
+                    <button className="text-red-600 hover:text-red-800 text-sm font-medium">
+                      <TrashIcon className="w-4 h-4" />
+                    </button>
+                    
+                    {/* Menu desplegable */}
+                    <div className="absolute right-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-20">
+                      <div className="p-2">
+                        <div className="text-xs font-medium text-gray-500 mb-2 px-2">
+                          Eliminar datos por período:
+                        </div>
+                        {MESES_ANIO.map((mes) => {
+                          const periodo = periodosList.find(p => p.mes === mes.numero && p.year === selectedYear);
+                          const status = periodo ? getEPSPeriodoStatus(eps.id, periodo.id) : undefined;
+                          const hasData = status?.tieneData || false;
+                          
+                          if (!hasData || !periodo) return null;
+                          
+                          return (
+                            <button
+                              key={mes.numero}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeletePeriodoData(eps, periodo);
+                              }}
+                              className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors flex items-center justify-between"
+                            >
+                              <span>{mes.nombre} {selectedYear}</span>
+                              <TrashIcon className="w-4 h-4" />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</div>
 
       {/* Sección Inferior: Períodos y Datos de Cartera */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
