@@ -328,28 +328,27 @@ export class CarteraService {
   console.log('📊 CarteraService: getEPSPeriodoStatus - Calculating status...');
 
   try {
-    // Obtener todos los registros activos de cartera agrupados por EPS y período
     const result = await this.carteraDataRepository
       .createQueryBuilder('cartera')
       .select([
-        'cartera.epsId as epsId',
-        'cartera.periodoId as periodoId', 
+        'cartera.eps_id as epsId',
+        'cartera.periodo_id as periodoId', 
         'COUNT(cartera.id) as totalRegistros',
         'SUM(cartera.total) as totalCartera'
       ])
       .where('cartera.activo = :activo', { activo: true })
-      .groupBy('cartera.epsId, cartera.periodoId')
+      .groupBy('cartera.eps_id, cartera.periodo_id')
       .getRawMany();
 
     console.log('📊 CarteraService: Raw query result:', result);
 
-    // Transformar los resultados al formato esperado
+    // ✅ CORRECCIÓN: Usar nombres en lowercase que devuelve TypeORM
     const statusArray = result.map(item => ({
-      epsId: item.epsId,
-      periodoId: item.periodoId,
-      tieneData: parseInt(item.totalRegistros) > 0,
-      totalRegistros: parseInt(item.totalRegistros) || 0,
-      totalCartera: parseFloat(item.totalCartera) || 0
+      epsId: item.epsid,                              // ← CORREGIDO: lowercase
+      periodoId: item.periodoid,                      // ← CORREGIDO: lowercase
+      tieneData: parseInt(item.totalregistros) > 0,   // ← CORREGIDO: lowercase
+      totalRegistros: parseInt(item.totalregistros) || 0,  // ← CORREGIDO: lowercase
+      totalCartera: parseFloat(item.totalcartera) || 0     // ← CORREGIDO: lowercase
     }));
 
     console.log('📊 CarteraService: Processed status array:', statusArray);

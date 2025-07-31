@@ -4,7 +4,6 @@ import {
   BuildingOfficeIcon,
   CalendarDaysIcon,
   CurrencyDollarIcon,
-  DocumentArrowUpIcon,
   DocumentArrowDownIcon,
   TableCellsIcon,
   MagnifyingGlassIcon,
@@ -18,9 +17,7 @@ import {
   ChartBarIcon,
   ArrowPathIcon,
   TrashIcon,
-  ChevronDownIcon
 } from '@heroicons/react/24/outline';
-import { CheckCircleIcon as CheckCircleSolid, XCircleIcon as XCircleSolid } from '@heroicons/react/24/solid';
 import { 
   carteraAPI, 
   carteraUtils,
@@ -60,8 +57,7 @@ const InformacionCartera: React.FC = () => {
   const [selectedEPS, setSelectedEPS] = useState<EPS | null>(null);
   const [selectedPeriodo, setSelectedPeriodo] = useState<Periodo | null>(null);
   const [carteraData, setCarteraData] = useState<CarteraData[]>([]);
-  const [epsPeriodoStatus, setEpsPeriodoStatus] = useState<EPSPeriodoStatus[]>([]);  
-  // Estados de UI
+  const [epsPeriodoStatus, setEpsPeriodoStatus] = useState<EPSPeriodoStatus[]>([]);  // Estados de UI
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -70,8 +66,24 @@ const InformacionCartera: React.FC = () => {
   const [itemsPerPage] = useState(10);
   const [showUploadModal, setShowUploadModal] = useState(false);
 
-  // Hook de Sweet Alert
-
+const getGridCellStatus = (eps: EPS, periodo: Periodo) => {
+  const statusData = epsPeriodoStatus.find(
+    item => item.epsId === eps.id && item.periodoId === periodo.id
+  );
+  
+  console.log(`🔍 DEBUG: getGridCellStatus for ${eps.nombre} - ${periodo.nombre}:`, {
+    epsId: eps.id,
+    periodoId: periodo.id,
+    statusData,
+    tieneData: statusData?.tieneData || false,
+    totalEpsPeriodoStatus: epsPeriodoStatus.length
+  });
+  
+  return {
+    tieneData: statusData?.tieneData || false,
+    totalRegistros: statusData?.totalRegistros || 0
+  };
+};
   // Cargar datos iniciales
   useEffect(() => {
     loadInitialData();
@@ -108,11 +120,20 @@ const InformacionCartera: React.FC = () => {
       }
 
       if (statusResponse.success && Array.isArray(statusResponse.data)) {
+        console.log('🔍 DEBUG: Status data from server:', statusResponse.data);
+        console.log('🔍 DEBUG: First status item:', statusResponse.data[0]);
+        
+        // Verificar estructura de cada elemento
+        statusResponse.data.forEach((item, index) => {
+          console.log(`🔍 DEBUG: Status item ${index}:`, {
+            epsId: item.epsId,
+            periodoId: item.periodoId,
+            tieneData: item.tieneData,
+            totalRegistros: item.totalRegistros
+          });
+        });
+        
         setEpsPeriodoStatus(statusResponse.data);
-      } else {
-        console.warn('Status response failed or invalid:', statusResponse);
-        setEpsPeriodoStatus([]);
-        showError({ title: 'Error', text: 'No se pudo cargar el estado de los datos' });
       }
 
     } catch (error: any) {
@@ -410,12 +431,9 @@ const InformacionCartera: React.FC = () => {
   const findPeriodoByYearAndMonth = (year: number, mes: number): Periodo | null => {
     return periodosList.find(p => p.year === year && p.mes === mes) || null;
   };
-
   const hasDataForEPSYearMonth = (epsId: string, year: number, mes: number): boolean => {
   const periodo = findPeriodoByYearAndMonth(year, mes);
-  if (!periodo) {
-    return false;
-  }
+  if (!periodo) return false;
   
   const status = getEPSPeriodoStatus(epsId, periodo.id);
   return status?.tieneData || false;
@@ -635,6 +653,14 @@ const InformacionCartera: React.FC = () => {
     );
   }
 
+  console.log('🔍 DEBUG: Render state:', {
+  epsListLength: epsList.length,
+  periodosListLength: periodosList.length,
+  epsPeriodoStatusLength: epsPeriodoStatus.length,
+  selectedYear,
+  epsPeriodoStatus: epsPeriodoStatus.slice(0, 3) // Solo los primeros 3
+});
+
   return (
     <div className="space-y-6">
       {/* Header Elegante */}
@@ -765,8 +791,7 @@ const InformacionCartera: React.FC = () => {
             
             {MESES_ANIO.map((mes) => {
               const periodo = periodosList.find(p => p.mes === mes.numero && p.year === selectedYear);
-              const statusData = periodo ? getEPSPeriodoStatus(eps.id, periodo.id) : undefined;
-              const hasData = statusData?.tieneData || false;
+              const status = periodo ? getGridCellStatus(eps, periodo) : { tieneData: false, totalRegistros: 0 };
               const isSelected = selectedEPS?.id === eps.id && selectedPeriodo?.id === periodo?.id;
               
               return (
@@ -781,16 +806,16 @@ const InformacionCartera: React.FC = () => {
                     className={`w-full h-12 rounded-lg border-2 transition-all duration-200 relative group ${
                       isSelected
                         ? 'border-blue-500 bg-blue-100'
-                        : hasData
+                        : status.tieneData
                         ? 'border-green-300 bg-green-50 hover:border-green-500 hover:bg-green-100'
                         : 'border-gray-200 bg-gray-50 hover:border-gray-400 hover:bg-gray-100'
                     } ${!periodo ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                   >
-                    {hasData ? (
+                    {status.tieneData ? (
                       <div className="flex flex-col items-center justify-center h-full">
                         <CheckCircleIcon className="w-4 h-4 text-green-600 mb-1" />
                         <span className="text-xs font-medium text-green-800">
-                          {statusData?.totalRegistros || 0}
+                          {status.totalRegistros}
                         </span>
                       </div>
                     ) : periodo ? (
@@ -805,13 +830,13 @@ const InformacionCartera: React.FC = () => {
                     
                     {/* Tooltip */}
                     <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20">
-                      {hasData ? `${statusData?.totalRegistros || 0} registros` : 'Sin datos'}
+                      {status.tieneData ? `${status.totalRegistros} registros` : 'Sin datos'}
                     </div>
                   </button>
                 </td>
               );
             })}
-            
+                        
             <td className="px-6 py-4 text-center">
               <div className="flex items-center justify-center space-x-2">
                 <button
