@@ -1,8 +1,8 @@
-// frontend/src/services/adresApi.ts (versión corregida y completa)
+// frontend/src/services/adresApi.ts - VERSIÓN CORREGIDA Y COMPLETA
 import api, { ApiResponse } from './api';
 import * as XLSX from 'xlsx';
 
-// INTERFACES (ajustadas con todas las props de backend)
+// ✅ INTERFACES - ACTUALIZADAS Y CONSISTENTES CON EL BACKEND
 export interface EPS {
   id: string;
   codigo: string;
@@ -30,18 +30,21 @@ export interface AdresData {
   periodo: Periodo;
   upc: number;
   valorGirado: number;
+  pagos?: number; // ✅ Opcional porque puede no estar en todos los registros
+  cumplimientoPagos?: number; // ✅ Opcional porque puede no estar en todos los registros
   observaciones?: string;
   activo: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
+// ✅ INTERFACE CLAVE: EPSPeriodoStatus - igual que cartera y flujo
 export interface EPSPeriodoStatus {
   epsId: string;
   periodoId: string;
   tieneData: boolean;
   totalRegistros: number;
-  totalValorGirado: number;  // Ajustado a tu backend (totalCartera -> totalValorGirado)
+  totalValorGirado: number;
 }
 
 export interface AdresFilterParams {
@@ -87,8 +90,9 @@ export interface AdresStats {
   porEPS: Array<{ epsNombre: string, count: number, sumValorGirado: number }>;
 }
 
-// SERVICIOS API (agregada getEPSPeriodoStatus)
+// ✅ SERVICIOS API - COMPLETOS Y CORREGIDOS
 export const adresAPI = {
+  // ✅ Obtener todas las EPS
   async getAllEPS(): Promise<ApiResponse<EPS[]>> {
     try {
       console.log('🏢 AdresAPI: Obteniendo todas las EPS...');
@@ -101,6 +105,7 @@ export const adresAPI = {
     }
   },
 
+  // ✅ Obtener todos los períodos
   async getAllPeriodos(): Promise<ApiResponse<Periodo[]>> {
     try {
       console.log('📅 AdresAPI: Obteniendo todos los períodos...');
@@ -113,18 +118,34 @@ export const adresAPI = {
     }
   },
 
-  async getEPSPeriodoStatus(): Promise<ApiResponse<EPSPeriodoStatus[]>> {  // ✅ AGREGADO
+  // ✅ MÉTODO CLAVE: Obtener estado EPS-Período para indicadores visuales
+  async getEPSPeriodoStatus(): Promise<ApiResponse<EPSPeriodoStatus[]>> {
     try {
       console.log('📊 AdresAPI: Obteniendo estado EPS-Período...');
-      const response = await api.get('/adres/status');  // Asume endpoint /adres/status en backend
+      const response = await api.get('/adres/status');
       console.log('✅ AdresAPI: Estado EPS-Período obtenido:', response.data.data?.length || 0);
+      
+      // ✅ DEBUG: Log de estructura de datos recibida
+      if (response.data.data && response.data.data.length > 0) {
+        console.log('🔍 AdresAPI: Sample status data:', {
+          firstItem: response.data.data[0],
+          structure: Object.keys(response.data.data[0])
+        });
+      }
+      
       return response.data;
     } catch (error: any) {
       console.error('❌ AdresAPI: Error al obtener estado EPS-Período:', error);
-      throw error;
+      // ✅ En caso de error, retornar estructura válida pero vacía para evitar crashes
+      return {
+        success: false,
+        message: error.response?.data?.message || error.message || 'Error desconocido',
+        data: []
+      };
     }
   },
 
+  // ✅ Obtener datos de ADRES con filtros
   async getAdresData(filters: AdresFilterParams = {}): Promise<ApiResponse<AdresResponse>> {
     try {
       console.log('💰 AdresAPI: Obteniendo datos de ADRES...', filters);
@@ -137,7 +158,11 @@ export const adresAPI = {
       });
 
       const response = await api.get(`/adres/data?${params.toString()}`);
-      console.log('✅ AdresAPI: Datos de ADRES obtenidos:', response.data.data?.length || 0);
+      console.log('✅ AdresAPI: Datos de ADRES obtenidos:', {
+        recordsFound: response.data.data?.data?.length || 0,
+        total: response.data.data?.pagination?.total || 0
+      });
+      
       return response.data;
     } catch (error: any) {
       console.error('❌ AdresAPI: Error al obtener datos de ADRES:', error);
@@ -145,11 +170,14 @@ export const adresAPI = {
     }
   },
 
+  // ✅ Crear datos de ADRES
   async createAdresData(data: {
     epsId: string;
     periodoId: string;
     upc: number;
     valorGirado: number;
+    pagos?: number;
+    cumplimientoPagos?: number;
     observaciones?: string;
   }): Promise<ApiResponse<AdresData>> {
     try {
@@ -163,9 +191,76 @@ export const adresAPI = {
     }
   },
 
-  async getAdresStats(filters: AdresFilterParams = {}): Promise<ApiResponse<AdresStats>> {
+  // ✅ Subir archivo Excel
+  async uploadExcel(file: File, epsId: string, periodoId: string): Promise<ApiResponse<UploadResult>> {
     try {
-      console.log('📊 AdresAPI: Obteniendo estadísticas de ADRES...', filters);
+      console.log('📤 AdresAPI: Subiendo archivo Excel...', {
+        fileName: file.name,
+        fileSize: file.size,
+        epsId,
+        periodoId
+      });
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('epsId', epsId);
+      formData.append('periodoId', periodoId);
+
+      const response = await api.post('/adres/upload-excel', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      console.log('✅ AdresAPI: Archivo Excel subido exitosamente');
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ AdresAPI: Error al subir archivo Excel:', error);
+      throw error;
+    }
+  },
+
+  // ✅ Eliminar datos por período
+  async deleteAdresDataByPeriodo(epsId: string, periodoId: string): Promise<DeletePeriodoDataResponse> {
+    try {
+      console.log('🗑️ AdresAPI: Eliminando datos por período...', { epsId, periodoId });
+      const response = await api.delete(`/adres/data/periodo/${epsId}/${periodoId}`);
+      console.log('✅ AdresAPI: Datos eliminados exitosamente');
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ AdresAPI: Error al eliminar datos:', error);
+      throw error;
+    }
+  },
+
+  // ✅ Exportar a Excel
+  async exportToExcel(filters: AdresFilterParams = {}): Promise<Blob> {
+    try {
+      console.log('📊 AdresAPI: Exportando a Excel...', filters);
+      
+      const params = new URLSearchParams();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          params.append(key, value.toString());
+        }
+      });
+
+      const response = await api.get(`/adres/export?${params.toString()}`, {
+        responseType: 'blob'
+      });
+
+      console.log('✅ AdresAPI: Exportación completada');
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ AdresAPI: Error al exportar:', error);
+      throw error;
+    }
+  },
+
+  // ✅ Obtener estadísticas
+  async getStats(filters: AdresFilterParams = {}): Promise<ApiResponse<AdresStats>> {
+    try {
+      console.log('📈 AdresAPI: Obteniendo estadísticas...', filters);
       
       const params = new URLSearchParams();
       Object.entries(filters).forEach(([key, value]) => {
@@ -181,154 +276,62 @@ export const adresAPI = {
       console.error('❌ AdresAPI: Error al obtener estadísticas:', error);
       throw error;
     }
-  },
-
-  async deleteAdresDataByPeriodo(epsId: string, periodoId: string): Promise<DeletePeriodoDataResponse> {
-    try {
-      console.log('🗑️ AdresAPI: Eliminando datos del período:', { epsId, periodoId });
-      
-      const response = await api.delete(`/adres/data/periodo/${epsId}/${periodoId}`);
-      
-      console.log('✅ AdresAPI: Datos eliminados exitosamente:', response.data);
-      return response.data;
-      
-    } catch (error: any) {
-      console.error('❌ AdresAPI: Error al eliminar datos del período:', error);
-      
-      if (error.response?.data) {
-        return error.response.data;
-      }
-      
-      return {
-        success: false,
-        message: 'Error de conexión al eliminar datos del período',
-        data: null
-      };
-    }
-  },
-
-  async downloadPlantilla(): Promise<Blob> {
-    try {
-      console.log('📥 AdresAPI: Descargando plantilla...');
-      const response = await api.get('/adres/plantilla', {
-        responseType: 'blob'
-      });
-      console.log('✅ AdresAPI: Plantilla descargada exitosamente');
-      return response.data;
-    } catch (error: any) {
-      console.error('❌ AdresAPI: Error al descargar plantilla:', error);
-      throw error;
-    }
-  },
-
-  async uploadFile(
-    file: File, 
-    epsId: string, 
-    periodoId: string, 
-    observaciones?: string
-  ): Promise<ApiResponse<UploadResult>> {
-    try {
-      console.log('📤 AdresAPI: Subiendo archivo...', {
-        fileName: file.name,
-        fileSize: file.size,
-        epsId,
-        periodoId
-      });
-
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('epsId', epsId);
-      formData.append('periodoId', periodoId);
-      if (observaciones) {
-        formData.append('observaciones', observaciones);
-      }
-
-      const response = await api.post('/adres/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      
-      console.log('✅ AdresAPI: Archivo subido exitosamente:', response.data);
-      return response.data;
-    } catch (error: any) {
-      console.error('❌ AdresAPI: Error al subir archivo:', error);
-      throw error;
-    }
-  },
-
-  async exportToExcel(filters: AdresFilterParams = {}): Promise<Blob> {
-    try {
-      console.log('📊 AdresAPI: Exportando datos a Excel...', filters);
-      
-      const params = new URLSearchParams();
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== '') {
-          params.append(key, value.toString());
-        }
-      });
-
-      const response = await api.get(`/adres/export?${params.toString()}`, {
-        responseType: 'blob'
-      });
-      
-      console.log('✅ AdresAPI: Datos exportados exitosamente');
-      return response.data;
-    } catch (error: any) {
-      console.error('❌ AdresAPI: Error al exportar datos:', error);
-      throw error;
-    }
-  },
+  }
 };
 
-// UTILIDADES (igual que antes)
+// ✅ UTILIDADES PARA ADRES - CONSISTENTES CON CARTERA Y FLUJO
 export const adresUtils = {
-  formatCurrency: (value: number): string => {
+  // ✅ Formatear moneda
+  formatCurrency: (value: number | null | undefined): string => {
+    if (value === null || value === undefined || isNaN(value)) {
+      return '$0';
+    }
+    
     return new Intl.NumberFormat('es-CO', {
       style: 'currency',
       currency: 'COP',
-      minimumFractionDigits: 0
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
     }).format(value);
   },
 
-  formatFileSize: (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
+  // ✅ Formatear números grandes
+  formatNumber: (value: number | null | undefined): string => {
+    if (value === null || value === undefined || isNaN(value)) {
+      return '0';
+    }
     
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return new Intl.NumberFormat('es-CO').format(value);
+  },
+
+  // ✅ Formatear porcentaje
+  formatPercentage: (value: number | null | undefined): string => {
+    if (value === null || value === undefined || isNaN(value)) {
+      return '0%';
+    }
     
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return `${value.toFixed(1)}%`;
   },
 
-  formatDate: (date: Date | string): string => {
-    const dateObj = typeof date === 'string' ? new Date(date) : date;
-    return dateObj.toLocaleDateString('es-CO', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+  // ✅ Generar nombre de archivo para exportación
+  generateFileName: (prefix: string, epsNombre?: string, periodoNombre?: string): string => {
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '_');
+    let filename = `${prefix}_${timestamp}`;
+    
+    if (epsNombre) {
+      const cleanEpsName = epsNombre.replace(/[^a-zA-Z0-9]/g, '_');
+      filename += `_${cleanEpsName}`;
+    }
+    
+    if (periodoNombre) {
+      const cleanPeriodName = periodoNombre.replace(/[^a-zA-Z0-9]/g, '_');
+      filename += `_${cleanPeriodName}`;
+    }
+    
+    return `${filename}.xlsx`;
   },
 
-  formatDateTime: (date: Date | string): string => {
-    const dateObj = typeof date === 'string' ? new Date(date) : date;
-    return dateObj.toLocaleString('es-CO', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  },
-
-  formatPeriodoName: (periodo: Periodo): string => {
-    const meses = [
-      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-    ];
-    return `${meses[periodo.mes - 1]} ${periodo.year}`;
-  },
-
+  // ✅ Descargar blob como archivo
   downloadBlob: (blob: Blob, filename: string): void => {
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -340,110 +343,53 @@ export const adresUtils = {
     window.URL.revokeObjectURL(url);
   },
 
-  validateFile: (file: File): { valid: boolean; error?: string } => {
+  // ✅ Validar archivo Excel
+  validateExcelFile: (file: File): { isValid: boolean; error?: string } => {
+    const maxSize = 10 * 1024 * 1024; // 10MB
     const allowedTypes = [
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'application/vnd.ms-excel',
-      'text/csv'
+      'application/vnd.ms-excel'
     ];
-    
+
     if (!allowedTypes.includes(file.type)) {
       return {
-        valid: false,
-        error: 'Tipo de archivo no válido. Solo se permiten archivos Excel (.xlsx, .xls) o CSV.'
+        isValid: false,
+        error: 'El archivo debe ser un Excel (.xlsx o .xls)'
       };
     }
-    
-    const maxSize = 10 * 1024 * 1024; // 10MB
+
     if (file.size > maxSize) {
       return {
-        valid: false,
-        error: `El archivo es demasiado grande. Tamaño máximo: ${adresUtils.formatFileSize(maxSize)}`
+        isValid: false,
+        error: 'El archivo no debe superar los 10MB'
       };
     }
-    
-    if (file.size === 0) {
-      return {
-        valid: false,
-        error: 'El archivo está vacío'
-      };
-    }
-    
-    return { valid: true };
+
+    return { isValid: true };
   },
 
-  validateFileStructure: (file: File): Promise<{ valid: boolean; error?: string }> => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      
-      reader.onload = (e) => {
-        try {
-          const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: 'array' });
-          
-          if (!workbook.SheetNames.length) {
-            resolve({ valid: false, error: 'El archivo no contiene hojas de cálculo' });
-            return;
-          }
-          
-          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-          const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
-          
-          if (!jsonData.length) {
-            resolve({ valid: false, error: 'La hoja está vacía' });
-            return;
-          }
-          
-          const headers = jsonData[0] as string[];
-          const requiredHeaders = ['EPS', 'UPC', 'Valor Girado'];
-          const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
-          
-          if (missingHeaders.length > 0) {
-            resolve({ 
-              valid: false, 
-              error: `Columnas faltantes: ${missingHeaders.join(', ')}` 
-            });
-            return;
-          }
-          
-          if (jsonData.length < 2) {
-            resolve({ valid: false, error: 'El archivo no contiene datos' });
-            return;
-          }
-          
-          resolve({ valid: true });
-          
-        } catch (error) {
-          resolve({ valid: false, error: 'Error al leer el archivo' });
-        }
-      };
-      
-      reader.onerror = () => {
-        resolve({ valid: false, error: 'Error al cargar el archivo' });
-      };
-      
-      reader.readAsArrayBuffer(file);
-    });
+  // ✅ Formatear nombre de período para display
+  formatPeriodoName: (periodo: Periodo): string => {
+    return `${periodo.nombre} ${periodo.year}`;
   },
 
-  generateFileName: (prefix: string, epsNombre?: string, periodoNombre?: string): string => {
-    const timestamp = new Date().toISOString().split('T')[0];
-    let fileName = `${prefix}_${timestamp}`;
-    
-    if (epsNombre) {
-      fileName += `_${epsNombre.replace(/\s+/g, '_')}`;
-    }
-    
-    if (periodoNombre) {
-      fileName += `_${periodoNombre.replace(/\s+/g, '_')}`;
-    }
-    
-    return `${fileName}.xlsx`;
+  // ✅ Obtener color para cumplimiento
+  getCumplimientoColor: (cumplimiento: number): string => {
+    if (cumplimiento >= 90) return 'text-green-600';
+    if (cumplimiento >= 70) return 'text-yellow-600';
+    return 'text-red-600';
   },
 
-  calculateTotalValorGirado: (adresData: AdresData[]): number => {
-    return adresData.reduce((total, item) => total + (item.valorGirado || 0), 0);
-  },
+  // ✅ Obtener clases CSS para badges de cumplimiento
+  getCumplimientoBadgeClasses: (cumplimiento: number): string => {
+    if (cumplimiento >= 90) return 'bg-green-100 text-green-800';
+    if (cumplimiento >= 70) return 'bg-yellow-100 text-yellow-800';
+    return 'bg-red-100 text-red-800';
+  }
 };
 
-export default adresAPI;
+// ✅ Exportar todo como default también para compatibilidad
+export default {
+  adresAPI,
+  adresUtils
+};

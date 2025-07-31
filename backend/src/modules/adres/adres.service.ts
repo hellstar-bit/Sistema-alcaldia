@@ -58,46 +58,66 @@ export class AdresService {
 
   // ✅ Método para status EPS-Período
   async getEPSPeriodoStatus(): Promise<Array<{
-    epsId: string,
-    periodoId: string,
-    tieneData: boolean,
-    totalRegistros: number,
-    totalValorGirado: number
-  }>> {
-    console.log('📊 AdresService: getEPSPeriodoStatus - Calculating status...');
+  epsId: string,
+  periodoId: string,
+  tieneData: boolean,
+  totalRegistros: number,
+  totalValorGirado: number
+}>> {
+  console.log('📊 AdresService: getEPSPeriodoStatus - Calculating status...');
 
-    try {
-      const result = await this.adresDataRepository
-        .createQueryBuilder('adres')
-        .select([
-          'adres.epsId as epsId',
-          'adres.periodoId as periodoId', 
-          'COUNT(adres.id) as totalRegistros',
-          'SUM(adres.valorGirado) as totalValorGirado'
-        ])
-        .where('adres.activo = :activo', { activo: true })
-        .groupBy('adres.epsId, adres.periodoId')
-        .getRawMany();
+  try {
+    // ✅ CORRECCIÓN: Usar los nombres exactos de la tabla adres_data
+    const result = await this.adresDataRepository
+      .createQueryBuilder('adres')
+      .select([
+        'adres.epsId as epsId',           // ✅ Campo real: epsId
+        'adres.periodoId as periodoId',   // ✅ Campo real: periodoId  
+        'COUNT(adres.id) as totalRegistros',
+        'SUM(adres.valorGirado) as totalValorGirado'
+      ])
+      .where('adres.activo = :activo', { activo: true })  // ✅ Campo real: activo
+      .groupBy('adres.epsId, adres.periodoId')           // ✅ Agrupar por campos reales
+      .getRawMany();
 
-      console.log('📊 AdresService: Raw query result:', result);
+    console.log('📊 AdresService: Raw query result sample:', {
+      totalResults: result.length,
+      firstResult: result[0] || 'No results',
+      sqlQuery: 'SELECT epsId, periodoId, COUNT(id), SUM(valorGirado) FROM adres_data WHERE activo = 1 GROUP BY epsId, periodoId'
+    });
 
-      const statusArray = result.map(item => ({
-        epsId: item.epsId,
-        periodoId: item.periodoId,
-        tieneData: parseInt(item.totalRegistros) > 0,
-        totalRegistros: parseInt(item.totalRegistros) || 0,
-        totalValorGirado: parseFloat(item.totalValorGirado) || 0
-      }));
+    // ✅ CORRECCIÓN: Mapear usando los nombres exactos que devuelve la consulta
+    const statusArray = result.map(item => {
+      console.log('🔍 AdresService: Processing item:', item);
+      
+      return {
+        epsId: item.epsId,                                    // ✅ Campo exacto de la DB
+        periodoId: item.periodoId,                            // ✅ Campo exacto de la DB
+        tieneData: parseInt(item.totalRegistros) > 0,         // ✅ Convertir a boolean
+        totalRegistros: parseInt(item.totalRegistros) || 0,   // ✅ Convertir a número
+        totalValorGirado: parseFloat(item.totalValorGirado) || 0  // ✅ Convertir a número
+      };
+    });
 
-      console.log('📊 AdresService: Processed status array:', statusArray);
-      console.log(`📊 AdresService: Found ${statusArray.length} EPS-Periodo combinations with data`);
+    console.log('📊 AdresService: Final processed status array:', {
+      totalCombinations: statusArray.length,
+      sampleItems: statusArray.slice(0, 3),
+      allEpsIds: [...new Set(statusArray.map(s => s.epsId))],
+      allPeriodoIds: [...new Set(statusArray.map(s => s.periodoId))]
+    });
 
-      return statusArray;
-    } catch (error) {
-      console.error('❌ AdresService: Error calculating EPS periodo status:', error);
-      throw new BadRequestException(`Error al obtener estado de períodos: ${error.message}`);
-    }
+    console.log(`✅ AdresService: Found ${statusArray.length} EPS-Periodo combinations with data`);
+    return statusArray;
+
+  } catch (error) {
+    console.error('❌ AdresService: Error calculating EPS periodo status:', error);
+    console.error('❌ AdresService: Error details:', {
+      message: error.message,
+      stack: error.stack
+    });
+    throw new BadRequestException(`Error al obtener estado de períodos: ${error.message}`);
   }
+}
 
   // ✅ Método para obtener datos de ADRES
   async getAdresData(filters: AdresFilterDto): Promise<{ data: AdresData[], total: number, totalValorGirado: number }> {
@@ -580,4 +600,362 @@ export class AdresService {
       throw new BadRequestException(`Error al exportar: ${error.message}`);
     }
   }
+
+// ✅ Método para eliminar un registro específico
+async deleteAdresData(id: string): Promise<void> {
+  console.log('🗑️ AdresService: deleteAdresData - Deleting specific record...', { id });
+
+  try {
+    const adresData = await this.adresDataRepository.findOne({ 
+      where: { id },
+      relations: ['eps', 'periodo']
+    });
+
+    if (!adresData) {
+      throw new BadRequestException('Registro de ADRES no encontrado');
+    }
+
+    await this.adresDataRepository.remove(adresData);
+    console.log('✅ AdresService: ADRES data deleted successfully:', id);
+  } catch (error) {
+    console.error('❌ AdresService: Error deleting ADRES data:', error);
+    throw new BadRequestException(`Error al eliminar registro: ${error.message}`);
+  }
+}
+
+// ✅ Método para actualizar datos de ADRES
+async updateAdresData(id: string, updateDto: CreateAdresDataDto): Promise<AdresData> {
+  console.log('📝 AdresService: updateAdresData - Updating ADRES data...', { id, updateDto });
+
+  try {
+    const adresData = await this.adresDataRepository.findOne({ 
+      where: { id },
+      relations: ['eps', 'periodo']
+    });
+
+    if (!adresData) {
+      throw new BadRequestException('Registro de ADRES no encontrado');
+    }
+
+    // Verificar EPS si se cambió
+    if (updateDto.epsId && updateDto.epsId !== adresData.eps.id) {
+      const eps = await this.epsRepository.findOne({ where: { id: updateDto.epsId } });
+      if (!eps) {
+        throw new BadRequestException('EPS no encontrada');
+      }
+      adresData.eps = eps;
+    }
+
+    // Verificar período si se cambió
+    if (updateDto.periodoId && updateDto.periodoId !== adresData.periodo.id) {
+      const periodo = await this.periodoRepository.findOne({ where: { id: updateDto.periodoId } });
+      if (!periodo) {
+        throw new BadRequestException('Período no encontrado');
+      }
+      adresData.periodo = periodo;
+    }
+
+    // Actualizar campos
+    if (updateDto.upc !== undefined) adresData.upc = updateDto.upc;
+    if (updateDto.valorGirado !== undefined) adresData.valorGirado = updateDto.valorGirado;
+    if (updateDto.observaciones !== undefined) adresData.observaciones = updateDto.observaciones;
+
+    const saved = await this.adresDataRepository.save(adresData);
+    console.log('✅ AdresService: ADRES data updated successfully:', saved.id);
+    return saved;
+  } catch (error) {
+    console.error('❌ AdresService: Error updating ADRES data:', error);
+    throw new BadRequestException(`Error al actualizar datos: ${error.message}`);
+  }
+}
+
+// ✅ Método para validar archivo Excel antes de procesar
+async validateExcel(file: Express.Multer.File, epsId: string, periodoId: string): Promise<{
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+  preview: any[];
+}> {
+  console.log('🔍 AdresService: validateExcel - Validating Excel file...', {
+    fileName: file.originalname,
+    fileSize: file.size,
+    epsId,
+    periodoId
+  });
+
+  try {
+    // Verificar que la EPS existe
+    const eps = await this.epsRepository.findOne({ where: { id: epsId } });
+    if (!eps) {
+      throw new BadRequestException('EPS no encontrada');
+    }
+
+    // Verificar que el período existe
+    const periodo = await this.periodoRepository.findOne({ where: { id: periodoId } });
+    if (!periodo) {
+      throw new BadRequestException('Período no encontrado');
+    }
+
+    const workbook = XLSX.read(file.buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+    const errors: string[] = [];
+    const warnings: string[] = [];
+    const preview: any[] = [];
+
+    // Validar estructura básica
+    if (jsonData.length === 0) {
+      errors.push('El archivo está vacío');
+      return { isValid: false, errors, warnings, preview };
+    }
+
+    // Validar headers esperados
+    const expectedHeaders = ['UPC', 'Valor Girado', 'Observaciones'];
+    const firstRow = jsonData[0] as any;
+    const actualHeaders = Object.keys(firstRow);
+    
+    const missingHeaders = expectedHeaders.filter(header => 
+      !actualHeaders.some(actual => actual.toLowerCase().includes(header.toLowerCase()))
+    );
+
+    if (missingHeaders.length > 0) {
+      errors.push(`Faltan columnas requeridas: ${missingHeaders.join(', ')}`);
+    }
+
+    // Validar datos
+    jsonData.forEach((row: any, index: number) => {
+      const rowNum = index + 2; // +2 porque Excel empieza en 1 y tiene header
+      
+      // Validar UPC
+      if (!row.UPC || isNaN(Number(row.UPC))) {
+        errors.push(`Fila ${rowNum}: UPC debe ser un número válido`);
+      }
+
+      // Validar Valor Girado
+      if (!row['Valor Girado'] || isNaN(Number(row['Valor Girado']))) {
+        errors.push(`Fila ${rowNum}: Valor Girado debe ser un número válido`);
+      }
+
+      // Preview de las primeras 5 filas válidas
+      if (preview.length < 5 && row.UPC && row['Valor Girado']) {
+        preview.push({
+          fila: rowNum,
+          upc: Number(row.UPC),
+          valorGirado: Number(row['Valor Girado']),
+          observaciones: row.Observaciones || ''
+        });
+      }
+    });
+
+    // Warnings
+    if (jsonData.length > 1000) {
+      warnings.push(`El archivo contiene ${jsonData.length} filas. Archivos grandes pueden tardar más en procesarse.`);
+    }
+
+    const isValid = errors.length === 0;
+    console.log(`✅ AdresService: Validation completed. Valid: ${isValid}, Errors: ${errors.length}, Warnings: ${warnings.length}`);
+
+    return { isValid, errors, warnings, preview };
+  } catch (error) {
+    console.error('❌ AdresService: Error validating Excel:', error);
+    throw new BadRequestException(`Error al validar archivo: ${error.message}`);
+  }
+}
+
+// ✅ Método para obtener resumen por EPS
+async getAdresSummaryByEPS(epsId: string): Promise<{
+  eps: EPS;
+  totalRegistros: number;
+  totalUPC: number;
+  totalValorGirado: number;
+  porPeriodo: Array<{
+    periodo: Periodo;
+    registros: number;
+    upcTotal: number;
+    valorGiradoTotal: number;
+  }>;
+}> {
+  console.log('📈 AdresService: getAdresSummaryByEPS - Getting summary for EPS...', { epsId });
+
+  try {
+    // Verificar que la EPS existe
+    const eps = await this.epsRepository.findOne({ where: { id: epsId } });
+    if (!eps) {
+      throw new BadRequestException('EPS no encontrada');
+    }
+
+    // Obtener datos por período
+    const dataByPeriod = await this.adresDataRepository
+      .createQueryBuilder('adres')
+      .leftJoinAndSelect('adres.periodo', 'periodo')
+      .select([
+        'periodo.id as periodoId',
+        'periodo.nombre as periodoNombre',
+        'periodo.year as periodoYear',
+        'periodo.mes as periodoMes',
+        'COUNT(adres.id) as registros',
+        'SUM(adres.upc) as upcTotal',
+        'SUM(adres.valorGirado) as valorGiradoTotal'
+      ])
+      .where('adres.epsId = :epsId', { epsId })
+      .andWhere('adres.activo = :activo', { activo: true })
+      .groupBy('periodo.id, periodo.nombre, periodo.year, periodo.mes')
+      .orderBy('periodo.year', 'DESC')
+      .addOrderBy('periodo.mes', 'DESC')
+      .getRawMany();
+
+    // Obtener totales generales
+    const totals = await this.adresDataRepository
+      .createQueryBuilder('adres')
+      .select([
+        'COUNT(adres.id) as totalRegistros',
+        'SUM(adres.upc) as totalUPC',
+        'SUM(adres.valorGirado) as totalValorGirado'
+      ])
+      .where('adres.epsId = :epsId', { epsId })
+      .andWhere('adres.activo = :activo', { activo: true })
+      .getRawOne();
+
+    // Formatear resultado
+    const porPeriodo = await Promise.all(
+      dataByPeriod.map(async (item) => {
+        const periodo = await this.periodoRepository.findOne({ where: { id: item.periodoId } });
+        return {
+          periodo,
+          registros: parseInt(item.registros) || 0,
+          upcTotal: parseFloat(item.upcTotal) || 0,
+          valorGiradoTotal: parseFloat(item.valorGiradoTotal) || 0
+        };
+      })
+    );
+
+    const result = {
+      eps,
+      totalRegistros: parseInt(totals.totalRegistros) || 0,
+      totalUPC: parseFloat(totals.totalUPC) || 0,
+      totalValorGirado: parseFloat(totals.totalValorGirado) || 0,
+      porPeriodo
+    };
+
+    console.log('✅ AdresService: Summary generated successfully');
+    return result;
+  } catch (error) {
+    console.error('❌ AdresService: Error getting summary:', error);
+    throw new BadRequestException(`Error al obtener resumen: ${error.message}`);
+  }
+}
+
+// ✅ Método para obtener tendencias
+async getAdresTrends(filters: AdresFilterDto): Promise<{
+  tendenciaUPC: Array<{ periodo: string, valor: number }>;
+  tendenciaValorGirado: Array<{ periodo: string, valor: number }>;
+  comparativoEPS: Array<{ eps: string, upc: number, valorGirado: number }>;
+}> {
+  console.log('📊 AdresService: getAdresTrends - Getting trends...', filters);
+
+  try {
+    const baseQuery = this.adresDataRepository
+      .createQueryBuilder('adres')
+      .leftJoin('adres.eps', 'eps')
+      .leftJoin('adres.periodo', 'periodo')
+      .where('adres.activo = :activo', { activo: true });
+
+    if (filters.epsId) {
+      baseQuery.andWhere('adres.epsId = :epsId', { epsId: filters.epsId });
+    }
+
+    // Tendencias por período
+    const tendenciaData = await baseQuery
+      .select([
+        'periodo.nombre as periodoNombre',
+        'periodo.year as periodoYear',
+        'periodo.mes as periodoMes',
+        'AVG(adres.upc) as promedioUPC',
+        'SUM(adres.valorGirado) as totalValorGirado'
+      ])
+      .groupBy('periodo.id, periodo.nombre, periodo.year, periodo.mes')
+      .orderBy('periodo.year', 'ASC')
+      .addOrderBy('periodo.mes', 'ASC')
+      .getRawMany();
+
+    // Comparativo por EPS
+    const comparativoData = await this.adresDataRepository
+      .createQueryBuilder('adres')
+      .leftJoin('adres.eps', 'eps')
+      .select([
+        'eps.nombre as epsNombre',
+        'AVG(adres.upc) as promedioUPC',
+        'SUM(adres.valorGirado) as totalValorGirado'
+      ])
+      .where('adres.activo = :activo', { activo: true })
+      .groupBy('eps.id, eps.nombre')
+      .orderBy('totalValorGirado', 'DESC')
+      .getRawMany();
+
+    const result = {
+      tendenciaUPC: tendenciaData.map(item => ({
+        periodo: `${item.periodoNombre} ${item.periodoYear}`,
+        valor: parseFloat(item.promedioUPC) || 0
+      })),
+      tendenciaValorGirado: tendenciaData.map(item => ({
+        periodo: `${item.periodoNombre} ${item.periodoYear}`,
+        valor: parseFloat(item.totalValorGirado) || 0
+      })),
+      comparativoEPS: comparativoData.map(item => ({
+        eps: item.epsNombre,
+        upc: parseFloat(item.promedioUPC) || 0,
+        valorGirado: parseFloat(item.totalValorGirado) || 0
+      }))
+    };
+
+    console.log('✅ AdresService: Trends generated successfully');
+    return result;
+  } catch (error) {
+    console.error('❌ AdresService: Error getting trends:', error);
+    throw new BadRequestException(`Error al obtener tendencias: ${error.message}`);
+  }
+}
+
+// ✅ Método para health check
+async getHealthStatus(): Promise<{
+  database: string;
+  recordsCount: number;
+  lastUpdate: Date | null;
+  activeEPS: number;
+  activePeriods: number;
+}> {
+  console.log('🏥 AdresService: getHealthStatus - Checking health...');
+
+  try {
+    // Verificar conexión a la base de datos
+    const recordsCount = await this.adresDataRepository.count();
+    
+    // Obtener última actualización
+    const lastRecord = await this.adresDataRepository.findOne({
+      order: { updatedAt: 'DESC' }
+    });
+
+    // Contar EPS activas
+    const activeEPS = await this.epsRepository.count({ where: { activa: true } });
+
+    // Contar períodos activos
+    const activePeriods = await this.periodoRepository.count({ where: { activo: true } });
+
+    const health = {
+      database: 'connected',
+      recordsCount,
+      lastUpdate: lastRecord?.updatedAt || null,
+      activeEPS,
+      activePeriods
+    };
+
+    console.log('✅ AdresService: Health check completed:', health);
+    return health;
+  } catch (error) {
+    console.error('❌ AdresService: Health check failed:', error);
+    throw new BadRequestException(`Error en health check: ${error.message}`);
+  }
+}
 }

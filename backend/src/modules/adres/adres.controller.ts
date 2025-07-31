@@ -1,4 +1,4 @@
-// backend/src/modules/adres/adres.controller.ts - VERSIÓN COMPLETA
+// backend/src/modules/adres/adres.controller.ts - VERSIÓN COMPLETA Y CORREGIDA
 import { 
   Controller, 
   Get, 
@@ -27,6 +27,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 export class AdresController {
   constructor(private readonly adresService: AdresService) {}
 
+  // ✅ ENDPOINT PARA OBTENER TODAS LAS EPS
   @Get('eps')
   async getAllEPS(@Request() req: any) {
     console.log('📊 AdresController: GET /adres/eps', {
@@ -52,6 +53,7 @@ export class AdresController {
     }
   }
 
+  // ✅ ENDPOINT PARA OBTENER TODOS LOS PERÍODOS
   @Get('periodos')
   async getAllPeriodos(@Request() req: any) {
     console.log('📅 AdresController: GET /adres/periodos', {
@@ -77,6 +79,7 @@ export class AdresController {
     }
   }
 
+  // ✅ ENDPOINT CLAVE: OBTENER ESTADO EPS-PERÍODO PARA INDICADORES VISUALES
   @Get('status')
   async getEPSPeriodoStatus(@Request() req: any) {
     console.log('📈 AdresController: GET /adres/status', {
@@ -85,7 +88,10 @@ export class AdresController {
 
     try {
       const status = await this.adresService.getEPSPeriodoStatus();
-      console.log('✅ AdresController: Estado EPS-Período obtenido:', status.length);
+      console.log('✅ AdresController: Estado EPS-Período obtenido:', {
+        totalCombinations: status.length,
+        sampleData: status.slice(0, 3) // Log de las primeras 3 para debug
+      });
       
       return {
         success: true,
@@ -97,56 +103,58 @@ export class AdresController {
       return {
         success: false,
         message: error.message,
+        data: []
+      };
+    }
+  }
+
+  // ✅ ENDPOINT PARA OBTENER DATOS DE ADRES CON FILTROS
+  @Get('data')
+  async getAdresData(@Query() filters: AdresFilterDto, @Request() req: any) {
+    console.log('💰 AdresController: GET /adres/data', {
+      user: req.user?.email || 'No user',
+      filters,
+    });
+
+    try {
+      const result = await this.adresService.getAdresData(filters);
+      console.log('✅ AdresController: Datos de ADRES obtenidos:', {
+        recordsFound: result.data.length,
+        total: result.total,
+        totalValorGirado: result.totalValorGirado
+      });
+      
+      // ✅ SIEMPRE retornar success: true si no hay errores
+      return {
+        success: true, // ✅ IMPORTANTE: Siempre true si la query fue exitosa
+        message: result.data.length > 0 
+          ? 'Datos de ADRES obtenidos exitosamente' 
+          : 'No se encontraron datos para los filtros especificados',
+        data: {
+          data: result.data,
+          pagination: {
+            total: result.total,
+            page: filters.page || 1,
+            limit: filters.limit || 10,
+            totalPages: Math.ceil(result.total / (filters.limit || 10))
+          },
+          summary: {
+            totalValorGirado: result.totalValorGirado
+          }
+        }
+      };
+    } catch (error) {
+      console.error('❌ AdresController: Error al obtener datos de ADRES:', error);
+      // ✅ SOLO retornar success: false en caso de error real
+      return {
+        success: false,
+        message: error.message,
         data: null
       };
     }
   }
 
- @Get('data')
-async getAdresData(@Query() filters: AdresFilterDto, @Request() req: any) {
-  console.log('💰 AdresController: GET /adres/data', {
-    user: req.user?.email || 'No user',
-    filters,
-  });
-
-  try {
-    const result = await this.adresService.getAdresData(filters);
-    console.log('✅ AdresController: Datos de ADRES obtenidos:', {
-      recordsFound: result.data.length,
-      total: result.total,
-      totalValorGirado: result.totalValorGirado
-    });
-    
-    // ✅ SIEMPRE retornar success: true si no hay errores
-    return {
-      success: true, // ✅ IMPORTANTE: Siempre true si la query fue exitosa
-      message: result.data.length > 0 
-        ? 'Datos de ADRES obtenidos exitosamente' 
-        : 'No se encontraron datos para los filtros especificados',
-      data: {
-        data: result.data,
-        pagination: {
-          total: result.total,
-          page: filters.page || 1,
-          limit: filters.limit || 10,
-          totalPages: Math.ceil(result.total / (filters.limit || 10))
-        },
-        summary: {
-          totalValorGirado: result.totalValorGirado
-        }
-      }
-    };
-  } catch (error) {
-    console.error('❌ AdresController: Error al obtener datos de ADRES:', error);
-    // ✅ SOLO retornar success: false en caso de error real
-    return {
-      success: false,
-      message: error.message,
-      data: null
-    };
-  }
-}
-
+  // ✅ ENDPOINT PARA CREAR DATOS DE ADRES
   @Post('data')
   async createAdresData(@Body() createDto: CreateAdresDataDto, @Request() req: any) {
     console.log('➕ AdresController: POST /adres/data', {
@@ -171,17 +179,16 @@ async getAdresData(@Query() filters: AdresFilterDto, @Request() req: any) {
     }
   }
 
+  // ✅ ENDPOINT PARA OBTENER ESTADÍSTICAS
   @Get('stats')
   async getAdresStats(@Query() filters: AdresFilterDto, @Request() req: any) {
-    console.log('📈 AdresController: GET /adres/stats', {
+    console.log('📊 AdresController: GET /adres/stats', {
       user: req.user?.email || 'No user',
       filters,
     });
 
     try {
       const stats = await this.adresService.getAdresStats(filters);
-      console.log('✅ AdresController: Estadísticas obtenidas:', stats);
-      
       return {
         success: true,
         message: 'Estadísticas de ADRES obtenidas exitosamente',
@@ -197,10 +204,79 @@ async getAdresData(@Query() filters: AdresFilterDto, @Request() req: any) {
     }
   }
 
+  // ✅ ENDPOINT PARA SUBIR ARCHIVO EXCEL
+  @Post('upload-excel')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadExcel(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() uploadDto: UploadExcelDto,
+    @Request() req: any
+  ) {
+    console.log('📤 AdresController: POST /adres/upload-excel', {
+      user: req.user?.email || 'No user',
+      fileName: file?.originalname,
+      fileSize: file?.size,
+      uploadDto,
+    });
+
+    try {
+      if (!file) {
+        throw new BadRequestException('No se ha proporcionado ningún archivo');
+      }
+
+      const result = await this.adresService.uploadExcel(file, uploadDto.epsId, uploadDto.periodoId);
+      
+      return {
+        success: true,
+        message: `Archivo procesado exitosamente. ${result.processed} registros procesados${
+          result.errors.length > 0 ? ` con ${result.errors.length} errores` : ''
+        }`,
+        data: result
+      };
+    } catch (error) {
+      console.error('❌ AdresController: Error al subir archivo:', error);
+      return {
+        success: false,
+        message: error.message,
+        data: null
+      };
+    }
+  }
+
+  // ✅ ENDPOINT PARA EXPORTAR A EXCEL
+  @Get('export')
+  async exportToExcel(@Query() filters: AdresFilterDto, @Res() res: Response, @Request() req: any) {
+    console.log('📋 AdresController: GET /adres/export', {
+      user: req.user?.email || 'No user',
+      filters,
+    });
+
+    try {
+      const buffer = await this.adresService.exportAdresToExcel(filters);
+      
+      res.set({
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Disposition': `attachment; filename="adres_export_${new Date().toISOString().slice(0, 10)}.xlsx"`,
+        'Content-Length': buffer.length,
+      });
+
+      console.log('✅ AdresController: Exportación completada');
+      res.end(buffer);
+    } catch (error) {
+      console.error('❌ AdresController: Error al exportar:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message,
+        data: null
+      });
+    }
+  }
+
+  // ✅ ENDPOINT PARA ELIMINAR DATOS POR PERÍODO
   @Delete('data/periodo/:epsId/:periodoId')
   async deleteAdresDataByPeriodo(
-    @Param('epsId') epsId: string, 
-    @Param('periodoId') periodoId: string, 
+    @Param('epsId') epsId: string,
+    @Param('periodoId') periodoId: string,
     @Request() req: any
   ) {
     console.log('🗑️ AdresController: DELETE /adres/data/periodo/:epsId/:periodoId', {
@@ -214,7 +290,7 @@ async getAdresData(@Query() filters: AdresFilterDto, @Request() req: any) {
       
       return {
         success: true,
-        message: `Se eliminaron ${result.deletedCount} registros del período`,
+        message: `Datos eliminados exitosamente. ${result.deletedCount} registros eliminados`,
         data: {
           deletedCount: result.deletedCount,
           epsId,
@@ -222,7 +298,7 @@ async getAdresData(@Query() filters: AdresFilterDto, @Request() req: any) {
         }
       };
     } catch (error) {
-      console.error('❌ AdresController: Error al eliminar datos del período:', error);
+      console.error('❌ AdresController: Error al eliminar datos:', error);
       return {
         success: false,
         message: error.message,
@@ -231,74 +307,92 @@ async getAdresData(@Query() filters: AdresFilterDto, @Request() req: any) {
     }
   }
 
-  @Get('plantilla')
-  async downloadPlantilla(@Res() res: Response, @Request() req: any) {
-    console.log('📄 AdresController: GET /adres/plantilla', {
+  // ✅ ENDPOINT PARA ELIMINAR UN REGISTRO ESPECÍFICO
+  @Delete('data/:id')
+  async deleteAdresData(@Param('id') id: string, @Request() req: any) {
+    console.log('🗑️ AdresController: DELETE /adres/data/:id', {
       user: req.user?.email || 'No user',
+      adresDataId: id
     });
 
     try {
-      const buffer = await this.adresService.generatePlantillaExcel();
+      await this.adresService.deleteAdresData(id);
       
-      res.set({
-        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': 'attachment; filename="Plantilla_ADRES.xlsx"',
-        'Content-Length': buffer.length,
-      });
-
-      res.send(buffer);
+      return {
+        success: true,
+        message: 'Registro eliminado exitosamente',
+        data: { deletedId: id }
+      };
     } catch (error) {
-      console.error('❌ AdresController: Error al generar plantilla:', error);
-      res.status(500).json({
+      console.error('❌ AdresController: Error al eliminar registro:', error);
+      return {
         success: false,
         message: error.message,
         data: null
-      });
+      };
     }
   }
 
-  @Post('upload')
+  // ✅ ENDPOINT PARA ACTUALIZAR DATOS DE ADRES
+  @Post('data/:id')
+  async updateAdresData(
+    @Param('id') id: string,
+    @Body() updateDto: CreateAdresDataDto,
+    @Request() req: any
+  ) {
+    console.log('📝 AdresController: POST /adres/data/:id', {
+      user: req.user?.email || 'No user',
+      adresDataId: id,
+      updateDto
+    });
+
+    try {
+      const adresData = await this.adresService.updateAdresData(id, updateDto);
+      
+      return {
+        success: true,
+        message: 'Datos de ADRES actualizados exitosamente',
+        data: adresData
+      };
+    } catch (error) {
+      console.error('❌ AdresController: Error al actualizar datos:', error);
+      return {
+        success: false,
+        message: error.message,
+        data: null
+      };
+    }
+  }
+
+  // ✅ ENDPOINT PARA VALIDAR DATOS DE EXCEL ANTES DE SUBIR
+  @Post('validate-excel')
   @UseInterceptors(FileInterceptor('file'))
-  async uploadFile(
-    @UploadedFile() file: Express.Multer.File | undefined,
+  async validateExcel(
+    @UploadedFile() file: Express.Multer.File,
     @Body() uploadDto: UploadExcelDto,
     @Request() req: any
   ) {
-    console.log('📤 AdresController: POST /adres/upload', {
+    console.log('🔍 AdresController: POST /adres/validate-excel', {
       user: req.user?.email || 'No user',
-      hasFile: !!file,
+      fileName: file?.originalname,
+      fileSize: file?.size,
       uploadDto,
     });
 
-    if (!file) {
-      throw new BadRequestException('No se ha subido ningún archivo');
-    }
-
-    const fileType = file.originalname!.split('.').pop()!.toLowerCase();
-    if (!['xlsx', 'xls', 'csv'].includes(fileType)) {
-      throw new BadRequestException('El archivo debe ser Excel (.xlsx, .xls) o CSV (.csv)');
-    }
-
     try {
-      const result = await this.adresService.processFileUpload(
-        file.buffer!,
-        uploadDto.epsId,
-        uploadDto.periodoId,
-        uploadDto.selectedFields || []
-      );
+      if (!file) {
+        throw new BadRequestException('No se ha proporcionado ningún archivo');
+      }
 
-      console.log('✅ AdresController: Archivo procesado exitosamente:', result.processed);
-
+      const result = await this.adresService.validateExcel(file, uploadDto.epsId, uploadDto.periodoId);
+      
       return {
-        success: result.success,
-        message: result.message,
-        data: {
-          processed: result.processed,
-          errors: result.errors
-        }
+        success: true,
+        message: 'Archivo validado exitosamente',
+        data: result
       };
     } catch (error) {
-      console.error('❌ AdresController: Error al procesar archivo:', error);
+      console.error('❌ AdresController: Error al validar archivo:', error);
       return {
         success: false,
         message: error.message,
@@ -307,32 +401,94 @@ async getAdresData(@Query() filters: AdresFilterDto, @Request() req: any) {
     }
   }
 
-  @Get('export')
-  async exportToExcel(@Query() filters: AdresFilterDto, @Res() res: Response, @Request() req: any) {
-    console.log('📋 AdresController: GET /adres/export', {
+  // ✅ ENDPOINT PARA OBTENER RESUMEN DE DATOS POR EPS
+  @Get('summary/:epsId')
+  async getAdresSummaryByEPS(
+    @Param('epsId') epsId: string,
+    @Request() req: any
+  ) {
+    console.log('📈 AdresController: GET /adres/summary/:epsId', {
       user: req.user?.email || 'No user',
-      filters,
+      epsId
     });
 
     try {
-      const buffer = await this.adresService.exportAdresToExcel(filters);
+      const summary = await this.adresService.getAdresSummaryByEPS(epsId);
       
-      const filename = `ADRES_Export_${new Date().toISOString().split('T')[0]}.xlsx`;
-      
-      res.set({
-        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': `attachment; filename="${filename}"`,
-        'Content-Length': buffer.length,
-      });
-
-      res.send(buffer);
+      return {
+        success: true,
+        message: 'Resumen de ADRES obtenido exitosamente',
+        data: summary
+      };
     } catch (error) {
-      console.error('❌ AdresController: Error al exportar:', error);
-      res.status(500).json({
+      console.error('❌ AdresController: Error al obtener resumen:', error);
+      return {
         success: false,
         message: error.message,
         data: null
-      });
+      };
+    }
+  }
+
+  // ✅ ENDPOINT PARA OBTENER TENDENCIAS POR PERÍODO
+  @Get('trends')
+  async getAdresTrends(@Query() filters: AdresFilterDto, @Request() req: any) {
+    console.log('📊 AdresController: GET /adres/trends', {
+      user: req.user?.email || 'No user',
+      filters
+    });
+
+    try {
+      const trends = await this.adresService.getAdresTrends(filters);
+      
+      return {
+        success: true,
+        message: 'Tendencias de ADRES obtenidas exitosamente',
+        data: trends
+      };
+    } catch (error) {
+      console.error('❌ AdresController: Error al obtener tendencias:', error);
+      return {
+        success: false,
+        message: error.message,
+        data: null
+      };
+    }
+  }
+
+  // ✅ ENDPOINT DE HEALTH CHECK PARA EL MÓDULO ADRES
+  @Get('health')
+  async healthCheck(@Request() req: any) {
+    console.log('🏥 AdresController: GET /adres/health', {
+      user: req.user?.email || 'No user',
+      timestamp: new Date().toISOString()
+    });
+
+    try {
+      const health = await this.adresService.getHealthStatus();
+      
+      return {
+        success: true,
+        message: 'Módulo ADRES funcionando correctamente',
+        data: {
+          status: 'healthy',
+          timestamp: new Date().toISOString(),
+          module: 'adres',
+          version: '1.0.0',
+          details: health
+        }
+      };
+    } catch (error) {
+      console.error('❌ AdresController: Error en health check:', error);
+      return {
+        success: false,
+        message: 'Error en el módulo ADRES',
+        data: {
+          status: 'unhealthy',
+          timestamp: new Date().toISOString(),
+          error: error.message
+        }
+      };
     }
   }
 }

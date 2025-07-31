@@ -1,43 +1,72 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn, Unique, Index } from 'typeorm';
+// backend/src/modules/adres/entities/adres-data.entity.ts - ENTIDAD CORREGIDA SEGÚN TU TABLA
+
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { EPS } from '../../cartera/entities/eps.entity';
 import { Periodo } from '../../cartera/entities/periodo.entity';
 
-@Entity('adres_data')
-// ✅ QUITAR o COMENTAR esta línea si existe:
-// @Unique(['epsId', 'periodoId'])  // <-- ESTA LÍNEA CAUSA EL PROBLEMA
+@Entity('adres_data')  // ✅ Nombre exacto de tu tabla
 export class AdresData {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => EPS, { eager: false })
-  @JoinColumn({ name: 'epsId' })
+  // ✅ RELACIONES CON FOREIGN KEYS - nombres exactos de tu tabla
+  @ManyToOne(() => EPS, { eager: true })
+  @JoinColumn({ name: 'epsId' })    // ✅ Nombre exacto: epsId
   eps: EPS;
 
-  @Column({ name: 'epsId' })
+  @Column({ name: 'epsId' })        // ✅ Nombre exacto: epsId
   epsId: string;
 
-  @ManyToOne(() => Periodo, { eager: false })
-  @JoinColumn({ name: 'periodoId' })
+  @ManyToOne(() => Periodo, { eager: true })
+  @JoinColumn({ name: 'periodoId' }) // ✅ Nombre exacto: periodoId
   periodo: Periodo;
 
-  @Column({ name: 'periodoId' })
+  @Column({ name: 'periodoId' })     // ✅ Nombre exacto: periodoId
   periodoId: string;
 
-  @Column('decimal', { precision: 15, scale: 2 })
+  // ✅ CAMPOS DE DATOS - exactos según tu tabla
+  @Column({ 
+    type: 'decimal', 
+    precision: 15, 
+    scale: 2,
+    name: 'upc'                      // ✅ Nombre exacto: upc
+  })
   upc: number;
 
-  @Column('decimal', { precision: 15, scale: 2 })
+  @Column({ 
+    type: 'decimal', 
+    precision: 15, 
+    scale: 2,
+    name: 'valorGirado'              // ✅ Nombre exacto: valorGirado
+  })
   valorGirado: number;
 
-  @Column('text', { nullable: true })
-  observaciones: string;
+  @Column({ 
+    type: 'text', 
+    nullable: true,
+    name: 'observaciones'            // ✅ Nombre exacto: observaciones
+  })
+  observaciones?: string;
 
-  @Column({ default: true })
+  // ✅ CAMPOS DE CONTROL - exactos según tu tabla
+  @Column({ 
+    type: 'tinyint',
+    default: 1,
+    name: 'activo'                   // ✅ Nombre exacto: activo
+  })
   activo: boolean;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ 
+    type: 'datetime',
+    precision: 6,
+    name: 'createdAt'                // ✅ Nombre exacto: createdAt
+  })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ 
+    type: 'datetime', 
+    precision: 6,
+    name: 'updatedAt'                // ✅ Nombre exacto: updatedAt
+  })
   updatedAt: Date;
 }
