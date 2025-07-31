@@ -57,7 +57,8 @@ export class AdresService {
   }
 
   // ✅ Método para status EPS-Período
-  async getEPSPeriodoStatus(): Promise<Array<{
+  
+async getEPSPeriodoStatus(): Promise<Array<{
   epsId: string,
   periodoId: string,
   tieneData: boolean,
@@ -67,54 +68,55 @@ export class AdresService {
   console.log('📊 AdresService: getEPSPeriodoStatus - Calculating status...');
 
   try {
-    // ✅ CORRECCIÓN: Usar los nombres exactos de la tabla adres_data
     const result = await this.adresDataRepository
       .createQueryBuilder('adres')
       .select([
-        'adres.epsId as epsId',           // ✅ Campo real: epsId
-        'adres.periodoId as periodoId',   // ✅ Campo real: periodoId  
+        'adres.epsId as epsId',
+        'adres.periodoId as periodoId', 
         'COUNT(adres.id) as totalRegistros',
         'SUM(adres.valorGirado) as totalValorGirado'
       ])
-      .where('adres.activo = :activo', { activo: true })  // ✅ Campo real: activo
-      .groupBy('adres.epsId, adres.periodoId')           // ✅ Agrupar por campos reales
+      .where('adres.activo = :activo', { activo: true })
+      .groupBy('adres.epsId, adres.periodoId')
       .getRawMany();
 
-    console.log('📊 AdresService: Raw query result sample:', {
-      totalResults: result.length,
-      firstResult: result[0] || 'No results',
-      sqlQuery: 'SELECT epsId, periodoId, COUNT(id), SUM(valorGirado) FROM adres_data WHERE activo = 1 GROUP BY epsId, periodoId'
-    });
+    console.log('📊 AdresService: Raw query result:', result);
 
-    // ✅ CORRECCIÓN: Mapear usando los nombres exactos que devuelve la consulta
+    // ✅ CORRECCIÓN: PostgreSQL devuelve nombres en lowercase
     const statusArray = result.map(item => {
-      console.log('🔍 AdresService: Processing item:', item);
+      // 🔧 Acceder a los campos en lowercase (como los devuelve PostgreSQL)
+      const epsId = item.epsid || item.epsId;                    // ✅ lowercase primero
+      const periodoId = item.periodoid || item.periodoId;        // ✅ lowercase primero
+      const totalRegistros = item.totalregistros || item.totalRegistros; // ✅ lowercase primero
+      const totalValorGirado = item.totalvalorgirado || item.totalValorGirado; // ✅ lowercase primero
+
+      console.log('🔍 AdresService: Processing item CORREGIDO:', {
+        originalItem: item,
+        originalKeys: Object.keys(item),
+        extractedValues: {
+          epsId,
+          periodoId,
+          totalRegistros,
+          totalValorGirado
+        }
+      });
       
       return {
-        epsId: item.epsId,                                    // ✅ Campo exacto de la DB
-        periodoId: item.periodoId,                            // ✅ Campo exacto de la DB
-        tieneData: parseInt(item.totalRegistros) > 0,         // ✅ Convertir a boolean
-        totalRegistros: parseInt(item.totalRegistros) || 0,   // ✅ Convertir a número
-        totalValorGirado: parseFloat(item.totalValorGirado) || 0  // ✅ Convertir a número
+        epsId: epsId,
+        periodoId: periodoId,
+        tieneData: parseInt(totalRegistros) > 0,
+        totalRegistros: parseInt(totalRegistros) || 0,
+        totalValorGirado: parseFloat(totalValorGirado) || 0
       };
     });
 
-    console.log('📊 AdresService: Final processed status array:', {
-      totalCombinations: statusArray.length,
-      sampleItems: statusArray.slice(0, 3),
-      allEpsIds: [...new Set(statusArray.map(s => s.epsId))],
-      allPeriodoIds: [...new Set(statusArray.map(s => s.periodoId))]
-    });
-
+    console.log('📊 AdresService: Processed status array CORREGIDO:', statusArray);
     console.log(`✅ AdresService: Found ${statusArray.length} EPS-Periodo combinations with data`);
+
     return statusArray;
 
   } catch (error) {
     console.error('❌ AdresService: Error calculating EPS periodo status:', error);
-    console.error('❌ AdresService: Error details:', {
-      message: error.message,
-      stack: error.stack
-    });
     throw new BadRequestException(`Error al obtener estado de períodos: ${error.message}`);
   }
 }

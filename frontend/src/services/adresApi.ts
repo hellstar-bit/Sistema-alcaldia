@@ -120,30 +120,57 @@ export const adresAPI = {
 
   // ✅ MÉTODO CLAVE: Obtener estado EPS-Período para indicadores visuales
   async getEPSPeriodoStatus(): Promise<ApiResponse<EPSPeriodoStatus[]>> {
-    try {
-      console.log('📊 AdresAPI: Obteniendo estado EPS-Período...');
-      const response = await api.get('/adres/status');
-      console.log('✅ AdresAPI: Estado EPS-Período obtenido:', response.data.data?.length || 0);
-      
-      // ✅ DEBUG: Log de estructura de datos recibida
-      if (response.data.data && response.data.data.length > 0) {
-        console.log('🔍 AdresAPI: Sample status data:', {
-          firstItem: response.data.data[0],
-          structure: Object.keys(response.data.data[0])
-        });
-      }
-      
-      return response.data;
-    } catch (error: any) {
-      console.error('❌ AdresAPI: Error al obtener estado EPS-Período:', error);
-      // ✅ En caso de error, retornar estructura válida pero vacía para evitar crashes
-      return {
-        success: false,
-        message: error.response?.data?.message || error.message || 'Error desconocido',
-        data: []
-      };
+  try {
+    console.log('📊 AdresAPI: Obteniendo estado EPS-Período...');
+    const response = await api.get('/adres/status');
+    
+    // 🔍 DEBUG: Log completo de la respuesta del backend
+    console.log('🔍 DEBUG API: Raw response from backend:', response);
+    console.log('🔍 DEBUG API: Response data structure:', {
+      status: response.status,
+      statusText: response.statusText,
+      data: response.data,
+      dataKeys: response.data ? Object.keys(response.data) : 'no data'
+    });
+    
+    if (response.data && response.data.data) {
+      console.log('🔍 DEBUG API: Response data.data structure:', {
+        length: response.data.data.length,
+        sampleItem: response.data.data[0],
+        allItemKeys: response.data.data[0] ? Object.keys(response.data.data[0]) : 'no items'
+      });
     }
-  },
+    
+    console.log('✅ AdresAPI: Estado EPS-Período obtenido:', response.data.data?.length || 0);
+    
+    // 🔍 DEBUG: Verificar tipos de datos
+    if (response.data.data && response.data.data[0]) {
+      const item = response.data.data[0];
+      console.log('🔍 DEBUG API: Item data types:', {
+        epsId: { value: item.epsId, type: typeof item.epsId },
+        periodoId: { value: item.periodoId, type: typeof item.periodoId },
+        tieneData: { value: item.tieneData, type: typeof item.tieneData },
+        totalRegistros: { value: item.totalRegistros, type: typeof item.totalRegistros }
+      });
+    }
+    
+    return response.data;
+  } catch (error: any) {
+    console.error('❌ AdresAPI: Error al obtener estado EPS-Período:', error);
+    console.error('❌ DEBUG API: Error details:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status
+    });
+    
+    // ✅ En caso de error, retornar estructura válida pero vacía
+    return {
+      success: false,
+      message: error.response?.data?.message || error.message || 'Error desconocido',
+      data: []
+    };
+  }
+},
 
   // ✅ Obtener datos de ADRES con filtros
   async getAdresData(filters: AdresFilterParams = {}): Promise<ApiResponse<AdresResponse>> {

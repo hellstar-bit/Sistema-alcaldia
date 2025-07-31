@@ -81,32 +81,52 @@ export class AdresController {
 
   // ✅ ENDPOINT CLAVE: OBTENER ESTADO EPS-PERÍODO PARA INDICADORES VISUALES
   @Get('status')
-  async getEPSPeriodoStatus(@Request() req: any) {
-    console.log('📈 AdresController: GET /adres/status', {
-      user: req.user?.email || 'No user',
-    });
+  @Get('status')
+async getEPSPeriodoStatus(@Request() req: any) {
+  console.log('📈 AdresController: GET /adres/status', {
+    user: req.user?.email || 'No user',
+  });
 
-    try {
-      const status = await this.adresService.getEPSPeriodoStatus();
-      console.log('✅ AdresController: Estado EPS-Período obtenido:', {
-        totalCombinations: status.length,
-        sampleData: status.slice(0, 3) // Log de las primeras 3 para debug
-      });
-      
-      return {
-        success: true,
-        message: 'Estado EPS-Período obtenido exitosamente',
-        data: status
-      };
-    } catch (error) {
-      console.error('❌ AdresController: Error al obtener estado:', error);
-      return {
-        success: false,
-        message: error.message,
-        data: []
-      };
-    }
+  try {
+    const status = await this.adresService.getEPSPeriodoStatus();
+    
+    // 🔍 DEBUG: Log completo de la respuesta
+    console.log('✅ AdresController: Estado EPS-Período obtenido:', status.length);
+    console.log('🔍 DEBUG CONTROLLER: Full status array:', JSON.stringify(status, null, 2));
+    console.log('🔍 DEBUG CONTROLLER: Sample item structure:', {
+      sampleItem: status[0],
+      allKeys: status[0] ? Object.keys(status[0]) : 'no items',
+      types: status[0] ? {
+        epsId: typeof status[0].epsId,
+        periodoId: typeof status[0].periodoId,
+        tieneData: typeof status[0].tieneData,
+        totalRegistros: typeof status[0].totalRegistros
+      } : 'no items'
+    });
+    
+    const response = {
+      success: true,
+      message: 'Estado EPS-Período obtenido exitosamente',
+      data: status
+    };
+
+    console.log('🔍 DEBUG CONTROLLER: Final response structure:', {
+      success: response.success,
+      message: response.message,
+      dataLength: response.data.length,
+      dataStructure: response.data[0] ? Object.keys(response.data[0]) : 'no data'
+    });
+    
+    return response;
+  } catch (error) {
+    console.error('❌ AdresController: Error al obtener estado:', error);
+    return {
+      success: false,
+      message: error.message,
+      data: []
+    };
   }
+}
 
   // ✅ ENDPOINT PARA OBTENER DATOS DE ADRES CON FILTROS
   @Get('data')

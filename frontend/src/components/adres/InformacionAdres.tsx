@@ -61,23 +61,56 @@ export const InformacionAdres: React.FC = () => {
 
   // ✅ FUNCIÓN CLAVE: getGridCellStatus - igual que en cartera y flujo
   const getGridCellStatus = (eps: EPS, periodo: Periodo) => {
-    const statusData = epsPeriodoStatus.find(
-      item => item.epsId === eps.id && item.periodoId === periodo.id
-    );
-    
-    console.log(`🔍 DEBUG ADRES: getGridCellStatus for ${eps.nombre} - ${periodo.nombre}:`, {
+  // 🔍 DEBUG TEMPORAL - AGREGA ESTAS LÍNEAS
+  console.log('🔍 DEBUG COMPLETO getGridCellStatus:', {
+    eps: {
+      id: eps.id,
+      nombre: eps.nombre
+    },
+    periodo: {
+      id: periodo.id,
+      nombre: periodo.nombre,
+      year: periodo.year,
+      mes: periodo.mes
+    },
+    epsPeriodoStatusTotal: epsPeriodoStatus.length,
+    epsPeriodoStatusSample: epsPeriodoStatus.slice(0, 3),
+    searchingFor: {
       epsId: eps.id,
-      periodoId: periodo.id,
-      statusData,
-      tieneData: statusData?.tieneData || false,
-      totalEpsPeriodoStatus: epsPeriodoStatus.length
+      periodoId: periodo.id
+    }
+  });
+
+  // 🔍 VERIFICAR CADA ITEM DEL ESTADO
+  epsPeriodoStatus.forEach((item, index) => {
+    console.log(`🔍 Status item ${index}:`, {
+      epsId: item.epsId,
+      periodoId: item.periodoId,
+      tieneData: item.tieneData,
+      totalRegistros: item.totalRegistros,
+      epsMatch: item.epsId === eps.id,
+      periodoMatch: item.periodoId === periodo.id,
+      bothMatch: item.epsId === eps.id && item.periodoId === periodo.id
     });
-    
-    return {
-      tieneData: statusData?.tieneData || false,
-      totalRegistros: statusData?.totalRegistros || 0
-    };
+  });
+
+  const statusData = epsPeriodoStatus.find(
+    item => item.epsId === eps.id && item.periodoId === periodo.id
+  );
+  
+  console.log(`🔍 DEBUG ADRES: getGridCellStatus for ${eps.nombre} - ${periodo.nombre}:`, {
+    epsId: eps.id,
+    periodoId: periodo.id,
+    statusData,
+    tieneData: statusData?.tieneData || false,
+    totalEpsPeriodoStatus: epsPeriodoStatus.length
+  });
+  
+  return {
+    tieneData: statusData?.tieneData || false,
+    totalRegistros: statusData?.totalRegistros || 0
   };
+};
 
   // ✅ FUNCIONES AUXILIARES - igual que cartera
   const getAvailablePeriodsForEPS = (epsId: string) => {
