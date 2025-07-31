@@ -36,59 +36,63 @@ export class FlujoService {
   // MÉTODOS PARA CONTROL DE CARGA
   // ===============================================
   async getControlCargaGrid(): Promise<Array<{
-    eps: EPS;
-    periodos: Array<{
-      periodo: Periodo;
-      tieneData: boolean;
-      totalRegistros: number;
-    }>;
-  }>> {
-    console.log('📊 FlujoService: getControlCargaGrid');
+  eps: EPS;
+  periodos: Array<{
+    periodo: Periodo;
+    tieneData: boolean;
+    totalRegistros: number;
+  }>;
+}>> {
+  console.log('📊 FlujoService: getControlCargaGrid');
 
-    try {
-      const allEPS = await this.epsRepository.find({
-        where: { activa: true },
-        order: { nombre: 'ASC' }
-      });
+  try {
+    const allEPS = await this.epsRepository.find({
+      where: { activa: true },
+      order: { nombre: 'ASC' }
+    });
 
-      const allPeriodos = await this.periodoRepository.find({
-        where: { activo: true },
-        order: { year: 'DESC', mes: 'DESC' }
-      });
+    const allPeriodos = await this.periodoRepository.find({
+      where: { activo: true },
+      order: { year: 'DESC', mes: 'DESC' }
+    });
 
-      // Obtener estadísticas de datos existentes
-      const dataStats = await this.flujoControlCargaRepository
-        .createQueryBuilder('control')
-        .leftJoin('control.ipsData', 'ipsData')
-        .select([
-          'control.epsId as epsId',
-          'control.periodoId as periodoId',
-          'COUNT(ipsData.id) as totalRegistros'
-        ])
-        .where('control.activo = :activo', { activo: true })
-        .groupBy('control.epsId, control.periodoId')
-        .getRawMany();
+    // ✅ CORRECCIÓN: Verificar que los campos usen snake_case
+    const dataStats = await this.flujoControlCargaRepository
+      .createQueryBuilder('control')
+      .leftJoin('control.ipsData', 'ipsData')
+      .select([
+        'control.eps_id as epsId',      // ✅ CORREGIDO: usar eps_id
+        'control.periodo_id as periodoId', // ✅ CORREGIDO: usar periodo_id
+        'COUNT(ipsData.id) as totalRegistros'
+      ])
+      .where('control.activo = :activo', { activo: true })
+      .groupBy('control.eps_id, control.periodo_id') // ✅ CORREGIDO
+      .getRawMany();
 
-      const result = allEPS.map(eps => ({
-        eps,
-        periodos: allPeriodos.map(periodo => {
-          const stats = dataStats.find(
-            stat => stat.epsId === eps.id && stat.periodoId === periodo.id
-          );
-          return {
-            periodo,
-            tieneData: stats ? parseInt(stats.totalRegistros) > 0 : false,
-            totalRegistros: stats ? parseInt(stats.totalRegistros) : 0
-          };
-        })
-      }));
+    console.log('🔍 DEBUG FLUJO: Raw SQL result:', dataStats);
 
-      return result;
-    } catch (error) {
-      console.error('❌ FlujoService: Error in getControlCargaGrid:', error);
-      throw new BadRequestException(`Error al obtener control de carga: ${error.message}`);
-    }
+    const result = allEPS.map(eps => ({
+      eps,
+      periodos: allPeriodos.map(periodo => {
+        const stats = dataStats.find(
+          // ✅ CORRECCIÓN: Usar nombres en lowercase que devuelve TypeORM
+          stat => stat.epsid === eps.id && stat.periodoid === periodo.id
+        );
+        return {
+          periodo,
+          tieneData: stats ? parseInt(stats.totalregistros) > 0 : false,  // ✅ lowercase
+          totalRegistros: stats ? parseInt(stats.totalregistros) : 0       // ✅ lowercase
+        };
+      })
+    }));
+
+    console.log('📊 FlujoService: Grid processed successfully');
+    return result;
+  } catch (error) {
+    console.error('❌ FlujoService: Error in getControlCargaGrid:', error);
+    throw new BadRequestException(`Error al obtener control de carga: ${error.message}`);
   }
+}
 
   async findOrCreateControlCarga(epsId: string, periodoId: string): Promise<FlujoControlCarga> {
     let controlCarga = await this.flujoControlCargaRepository.findOne({
