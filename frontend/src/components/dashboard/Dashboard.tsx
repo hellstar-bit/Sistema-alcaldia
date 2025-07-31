@@ -1,434 +1,889 @@
-// frontend/src/components/dashboard/Dashboard.tsx
-import React, { useState } from 'react';
+// frontend/src/components/dashboard/Dashboard.tsx - VERSIÓN COMPLETA SIN ERRORES
+import React, { useState, useEffect } from 'react';
 import {
-  ChartBarIcon,
-  DocumentArrowUpIcon,
   CurrencyDollarIcon,
   UsersIcon,
+  ArrowTrendingUpIcon,
   ExclamationTriangleIcon,
-  CalendarDaysIcon,
-  DocumentTextIcon,
+  DocumentArrowUpIcon,
   BanknotesIcon,
+  ChartBarIcon,
+  DocumentTextIcon,
   ClockIcon,
-  SparklesIcon,
-  ArrowTrendingUpIcon
+  CheckCircleIcon,
+  XCircleIcon,
+  InformationCircleIcon,
+  CalendarDaysIcon,
+  BuildingLibraryIcon,
+  ArrowUpIcon,
+  ArrowDownIcon,
+  EyeIcon,
+  ChevronRightIcon
 } from '@heroicons/react/24/outline';
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
+} from 'recharts';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { 
+  useDashboardData, 
+  useDataFormatting,
+  type DashboardStats,
+  type ChartDataPoint,
+  type EPSDistribution,
+  type RecentActivity,
+  type SystemStatus
+} from '../../hooks/useDashboardData';
 
-interface StatCardProps {
+// Hook personalizado para detectar el tamaño de pantalla
+const useScreenSize = () => {
+  const [screenSize, setScreenSize] = useState({
+    width: typeof window !== 'undefined' ? window.innerWidth : 0,
+    height: typeof window !== 'undefined' ? window.innerHeight : 0,
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      setScreenSize({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return {
+    ...screenSize,
+    isMobile: screenSize.width < 768,
+    isTablet: screenSize.width >= 768 && screenSize.width < 1024,
+    isDesktop: screenSize.width >= 1024,
+    isLarge: screenSize.width >= 1280,
+  };
+};
+
+// Tipos de componentes
+interface StatCard {
+  id: string;
   title: string;
   value: string;
   change: string;
   changeType: 'positive' | 'negative' | 'neutral';
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  color: string;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ title, value, change, changeType, icon: Icon }) => {
-  const changeColor = {
-    positive: 'text-success-600',
-    negative: 'text-danger-600',
-    neutral: 'text-gray-600'
-  }[changeType];
+interface QuickAction {
+  id: string;
+  title: string;
+  description: string;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  href: string;
+  color: string;
+  count?: number;
+}
 
-  const changeIcon = {
-    positive: '↗️',
-    negative: '↘️',
-    neutral: '➡️'
-  }[changeType];
-
-  const changeBg = {
-    positive: 'bg-success-50',
-    negative: 'bg-danger-50',
-    neutral: 'bg-gray-50'
-  }[changeType];
+// Componente de tarjeta de estadística
+const StatCard: React.FC<{ stat: StatCard; screenSize: any }> = ({ stat, screenSize }) => {
+  const Icon = stat.icon;
+  const isPositive = stat.changeType === 'positive';
+  const isNegative = stat.changeType === 'negative';
 
   return (
-    <div className="card p-4 sm:p-6 hover:shadow-elegant transition-all duration-300 border-l-4 border-primary-500">
-      <div className="flex items-center justify-between min-w-0">
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-gray-600 mb-2 truncate">{title}</p>
-          <p className="text-2xl sm:text-3xl font-bold text-primary-900 truncate mb-2">{value}</p>
-          <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${changeBg} ${changeColor}`}>
-            <span className="mr-1">{changeIcon}</span>
-            <span className="truncate font-medium">{change}</span>
+    <div className={`
+      bg-white rounded-xl shadow-sm border border-gray-200 p-6 
+      hover:shadow-md transition-all duration-300 group
+      ${screenSize.isMobile ? 'p-4' : 'p-6'}
+    `}>
+      <div className="flex items-center justify-between">
+        <div className="flex-1 min-w-0">
+          <p className={`
+            text-gray-600 font-medium mb-1
+            ${screenSize.isMobile ? 'text-sm' : 'text-sm'}
+          `}>
+            {stat.title}
+          </p>
+          <p className={`
+            font-bold text-gray-900 mb-2
+            ${screenSize.isMobile ? 'text-xl' : 'text-2xl'}
+          `}>
+            {stat.value}
+          </p>
+          <div className="flex items-center space-x-1">
+            {isPositive && <ArrowUpIcon className="w-4 h-4 text-success-500" />}
+            {isNegative && <ArrowDownIcon className="w-4 h-4 text-danger-500" />}
+            <span className={`
+              text-xs font-medium
+              ${isPositive ? 'text-success-600' : isNegative ? 'text-danger-600' : 'text-gray-500'}
+            `}>
+              {stat.change}
+            </span>
           </div>
         </div>
-        <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-primary-100 to-primary-200 rounded-xl flex items-center justify-center flex-shrink-0 ml-3 shadow-sm">
-          <Icon className="w-6 h-6 sm:w-7 sm:h-7 text-primary-700" />
+        <div className={`
+          rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-200
+          ${screenSize.isMobile ? 'w-12 h-12' : 'w-14 h-14'}
+          ${stat.color}
+        `}>
+          <Icon className={`text-white ${screenSize.isMobile ? 'w-6 h-6' : 'w-7 h-7'}`} />
         </div>
       </div>
     </div>
   );
 };
 
-interface QuickActionProps {
-  title: string;
-  description: string;
-  icon: React.ComponentType<any>;
-  href: string;
-  color: 'primary' | 'secondary' | 'success' | 'warning';
-}
-
-const QuickAction: React.FC<QuickActionProps> = ({ title, description, icon: Icon, href, color }) => {
-  const colorClasses = {
-    primary: 'bg-gradient-to-br from-primary-50 to-primary-100 text-primary-800 border-primary-200 hover:from-primary-100 hover:to-primary-200 hover:shadow-md',
-    secondary: 'bg-gradient-to-br from-blue-50 to-blue-100 text-blue-800 border-blue-200 hover:from-blue-100 hover:to-blue-200 hover:shadow-md',
-    success: 'bg-gradient-to-br from-success-50 to-success-100 text-success-800 border-success-200 hover:from-success-100 hover:to-success-200 hover:shadow-md',
-    warning: 'bg-gradient-to-br from-yellow-50 to-yellow-100 text-yellow-800 border-yellow-200 hover:from-yellow-100 hover:to-yellow-200 hover:shadow-md'
-  }[color];
-
-  const iconColor = {
-    primary: 'text-primary-600',
-    secondary: 'text-blue-600',
-    success: 'text-success-600',
-    warning: 'text-yellow-600'
-  }[color];
+// Componente de acción rápida
+const QuickActionCard: React.FC<{ 
+  action: QuickAction; 
+  screenSize: any; 
+  onNavigate: (href: string) => void;
+}> = ({ action, screenSize, onNavigate }) => {
+  const Icon = action.icon;
 
   return (
-    <a 
-      href={href}
-      className={`block p-4 rounded-xl border-2 transition-all duration-300 transform hover:scale-105 ${colorClasses}`}
+    <button
+      onClick={() => onNavigate(action.href)}
+      className={`
+        w-full bg-white rounded-xl shadow-sm border border-gray-200 p-6 
+        hover:shadow-md hover:border-primary-300 transition-all duration-300 
+        text-left group focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-opacity-50
+        ${screenSize.isMobile ? 'p-4' : 'p-6'}
+      `}
     >
-      <div className="flex items-start space-x-3">
-        <div className="w-10 h-10 rounded-lg bg-white bg-opacity-70 flex items-center justify-center flex-shrink-0">
-          <Icon className={`w-5 h-5 ${iconColor}`} />
+      <div className="flex items-start justify-between">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center space-x-3 mb-3">
+            <div className={`
+              rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-200
+              ${screenSize.isMobile ? 'w-10 h-10' : 'w-12 h-12'}
+              ${action.color}
+            `}>
+              <Icon className={`text-white ${screenSize.isMobile ? 'w-5 h-5' : 'w-6 h-6'}`} />
+            </div>
+            {action.count && (
+              <span className="bg-danger-100 text-danger-800 text-xs font-bold px-2 py-1 rounded-full">
+                {action.count}
+              </span>
+            )}
+          </div>
+          <h3 className={`
+            font-semibold text-gray-900 mb-2
+            ${screenSize.isMobile ? 'text-sm' : 'text-base'}
+          `}>
+            {action.title}
+          </h3>
+          <p className={`
+            text-gray-600 leading-relaxed
+            ${screenSize.isMobile ? 'text-xs' : 'text-sm'}
+          `}>
+            {action.description}
+          </p>
         </div>
-        <div className="min-w-0 flex-1">
-          <h3 className="font-semibold text-sm truncate mb-1">{title}</h3>
-          <p className="text-xs opacity-80 line-clamp-2">{description}</p>
-        </div>
+        <ChevronRightIcon className="w-5 h-5 text-gray-400 group-hover:text-primary-500 transition-colors duration-200 flex-shrink-0 ml-3" />
       </div>
-    </a>
+    </button>
   );
 };
 
-interface RecentActivityItem {
-  id: string;
-  type: 'upload' | 'process' | 'alert' | 'export';
-  title: string;
-  description: string;
-  timestamp: string;
-  user: string;
-}
-
-const RecentActivity: React.FC<{ activities: RecentActivityItem[] }> = ({ activities }) => {
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case 'upload':
-        return <DocumentArrowUpIcon className="w-4 h-4 sm:w-5 sm:h-5 text-primary-600" />;
-      case 'process':
-        return <ClockIcon className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />;
-      case 'alert':
-        return <ExclamationTriangleIcon className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600" />;
-      case 'export':
-        return <DocumentTextIcon className="w-4 h-4 sm:w-5 sm:h-5 text-success-600" />;
-      default:
-        return <ChartBarIcon className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />;
+// Componente de actividad reciente
+const RecentActivityItem: React.FC<{ 
+  activity: RecentActivity; 
+  screenSize: any; 
+}> = ({ activity, screenSize }) => {
+  const getStatusColor = () => {
+    switch (activity.status) {
+      case 'success': return 'bg-success-100 text-success-800';
+      case 'error': return 'bg-danger-100 text-danger-800';
+      case 'warning': return 'bg-warning-100 text-warning-800';
+      default: return 'bg-primary-100 text-primary-800';
     }
   };
 
-  const getActivityColor = (type: string) => {
-    switch (type) {
-      case 'upload':
-        return 'bg-gradient-to-r from-primary-50 to-primary-100';
-      case 'process':
-        return 'bg-gradient-to-r from-blue-50 to-blue-100';
-      case 'alert':
-        return 'bg-gradient-to-r from-yellow-50 to-yellow-100';
-      case 'export':
-        return 'bg-gradient-to-r from-success-50 to-success-100';
-      default:
-        return 'bg-gradient-to-r from-gray-50 to-gray-100';
+  const getStatusIcon = () => {
+    switch (activity.status) {
+      case 'success': return <CheckCircleIcon className="w-4 h-4" />;
+      case 'error': return <XCircleIcon className="w-4 h-4" />;
+      case 'warning': return <ExclamationTriangleIcon className="w-4 h-4" />;
+      default: return <InformationCircleIcon className="w-4 h-4" />;
     }
   };
 
   return (
-    <div className="space-y-3">
-      {activities.map((activity) => (
-        <div key={activity.id} className="flex items-start space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-all duration-200 border border-transparent hover:border-gray-200">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${getActivityColor(activity.type)} flex-shrink-0 shadow-sm`}>
-            {getActivityIcon(activity.type)}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-gray-900 truncate">{activity.title}</p>
-            <p className="text-xs text-gray-600 truncate mt-1">{activity.description}</p>
-            <div className="flex items-center space-x-2 mt-2">
-              <span className="text-xs text-gray-500 truncate">{activity.user}</span>
-              <span className="text-xs text-gray-300">•</span>
-              <span className="text-xs text-gray-500 truncate">{activity.timestamp}</span>
-            </div>
-          </div>
+    <div className={`
+      flex items-start space-x-4 p-4 hover:bg-gray-50 rounded-lg transition-colors duration-200
+      ${screenSize.isMobile ? 'p-3' : 'p-4'}
+    `}>
+      <div className={`
+        flex items-center justify-center rounded-full flex-shrink-0
+        ${screenSize.isMobile ? 'w-8 h-8' : 'w-10 h-10'}
+        ${getStatusColor()}
+      `}>
+        {getStatusIcon()}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className={`
+          font-medium text-gray-900
+          ${screenSize.isMobile ? 'text-sm' : 'text-sm'}
+        `}>
+          {activity.title}
+        </p>
+        <p className={`
+          text-gray-600 mt-1
+          ${screenSize.isMobile ? 'text-xs' : 'text-sm'}
+        `}>
+          {activity.description}
+        </p>
+        <div className="flex items-center space-x-2 mt-2">
+          <span className={`
+            text-gray-500
+            ${screenSize.isMobile ? 'text-xs' : 'text-xs'}
+          `}>
+            {activity.timestamp}
+          </span>
+          <span className="text-gray-400">•</span>
+          <span className={`
+            text-gray-500 font-medium
+            ${screenSize.isMobile ? 'text-xs' : 'text-xs'}
+          `}>
+            {activity.user}
+          </span>
         </div>
-      ))}
+      </div>
     </div>
   );
 };
 
 export const Dashboard: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const screenSize = useScreenSize();
   const [selectedPeriod, setSelectedPeriod] = useState('month');
+  
+  // Usar datos reales del dashboard
+  const {
+    stats,
+    chartData,
+    epsDistribution,
+    recentActivities,
+    systemStatus,
+    loading,
+    error,
+    refreshData,
+    refreshStats,
+    refreshSystemStatus
+  } = useDashboardData();
 
-  const stats = [
+  const { 
+    formatCurrency, 
+    formatNumber, 
+    formatTimeAgo, 
+    formatCarteraValue,
+    formatChangeText
+  } = useDataFormatting();
+
+  // Datos principales del dashboard usando datos reales
+  const statsCards: StatCard[] = [
     {
+      id: 'cartera-total',
       title: 'Cartera Total',
-      value: '$2.456.789.123',
-      change: '+12.5% vs mes anterior',
-      changeType: 'positive' as const,
-      icon: CurrencyDollarIcon
+      value: stats ? formatCarteraValue(stats.carteraTotal.value) : '$0',
+      change: stats ? formatChangeText(stats.carteraTotal.change, stats.carteraTotal.changeType) : 'Cargando...',
+      changeType: stats?.carteraTotal.changeType || 'neutral',
+      icon: CurrencyDollarIcon,
+      color: 'bg-primary-500'
     },
     {
+      id: 'eps-activas',
       title: 'EPS Activas',
-      value: '24',
-      change: 'Sin cambios',
-      changeType: 'neutral' as const,
-      icon: UsersIcon
+      value: stats ? formatNumber(stats.epsActivas.value) : '0',
+      change: stats ? formatChangeText(stats.epsActivas.change, stats.epsActivas.changeType) : 'Cargando...',
+      changeType: stats?.epsActivas.changeType || 'neutral',
+      icon: BuildingLibraryIcon,
+      color: 'bg-success-500'
     },
     {
+      id: 'ips-registradas',
       title: 'IPS Registradas',
-      value: '156',
-      change: '+3 nuevas este mes',
-      changeType: 'positive' as const,
-      icon: ArrowTrendingUpIcon
+      value: stats ? formatNumber(stats.ipsRegistradas.value) : '0',
+      change: stats ? formatChangeText(stats.ipsRegistradas.change, stats.ipsRegistradas.changeType) : 'Cargando...',
+      changeType: stats?.ipsRegistradas.changeType || 'neutral',
+      icon: UsersIcon,
+      color: 'bg-warning-500'
     },
     {
+      id: 'alertas-pendientes',
       title: 'Alertas Pendientes',
-      value: '8',
-      change: '-2 vs semana anterior',
-      changeType: 'positive' as const,
-      icon: ExclamationTriangleIcon
+      value: stats ? formatNumber(stats.alertasPendientes.value) : '0',
+      change: stats ? formatChangeText(stats.alertasPendientes.change, stats.alertasPendientes.changeType) : 'Cargando...',
+      changeType: stats?.alertasPendientes.changeType || 'neutral',
+      icon: ExclamationTriangleIcon,
+      color: 'bg-danger-500'
     }
   ];
 
-  const quickActions = [
+  const quickActions: QuickAction[] = [
     {
+      id: 'cargar-cartera',
       title: 'Cargar Información Cartera',
-      description: 'Subir archivo Excel con datos de cartera',
+      description: 'Subir archivo Excel con datos de cartera mensual',
       icon: DocumentArrowUpIcon,
-      href: '/cartera/upload',
-      color: 'primary' as const
+      href: '/carga/cartera',
+      color: 'bg-primary-500'
     },
     {
+      id: 'cargar-flujo',
       title: 'Cargar Información Flujo',
-      description: 'Subir archivo Excel con datos de flujo',
+      description: 'Subir archivo Excel con datos de flujo de caja',
       icon: BanknotesIcon,
-      href: '/flujo/upload',
-      color: 'secondary' as const
+      href: '/carga/flujo',
+      color: 'bg-success-500'
     },
     {
-      title: 'Ver Dashboards EPS',
-      description: 'Analizar datos por entidades promotoras',
-      icon: ChartBarIcon,
-      href: '/dashboards/eps',
-      color: 'success' as const
-    },
-    {
-      title: 'Información Base',
-      description: 'Gestionar datos maestros del sistema',
+      id: 'cargar-adres',
+      title: 'Cargar Información ADRES',
+      description: 'Subir archivo Excel con datos de ADRES',
       icon: DocumentTextIcon,
-      href: '/base',
-      color: 'warning' as const
+      href: '/carga/adres',
+      color: 'bg-purple-500'
+    },
+    {
+      id: 'ver-dashboards',
+      title: 'Ver Dashboards EPS',
+      description: 'Analizar datos por entidades promotoras de salud',
+      icon: ChartBarIcon,
+      href: '/dashboards/cartera/periodo',
+      color: 'bg-warning-500'
+    },
+    {
+      id: 'gestion-eps',
+      title: 'Gestión EPS/IPS',
+      description: 'Administrar entidades y sus datos maestros',
+      icon: BuildingLibraryIcon,
+      href: '/gestion/eps',
+      color: 'bg-indigo-500',
+      count: stats?.alertasPendientes.value || undefined
+    },
+    {
+      id: 'informacion-base',
+      title: 'Información Base',
+      description: 'Consultar datos maestros y configuraciones',
+      icon: DocumentTextIcon,
+      href: '/base/cartera',
+      color: 'bg-gray-500'
     }
   ];
 
-  const recentActivities: RecentActivityItem[] = [
-    {
-      id: '1',
-      type: 'upload',
-      title: 'Archivo de cartera cargado',
-      description: 'COMPENSAR - Enero 2024 (1,250 registros)',
-      timestamp: 'hace 15 minutos',
-      user: user?.name || 'Usuario'
-    },
-    {
-      id: '2',
-      type: 'process',
-      title: 'Procesamiento completado',
-      description: 'Dashboard EPS actualizado correctamente',
-      timestamp: 'hace 1 hora',
-      user: 'Sistema'
-    },
-    {
-      id: '3',
-      type: 'alert',
-      title: 'Alerta de vencimiento',
-      description: 'SURA - Cartera vencida mayor a 360 días',
-      timestamp: 'hace 2 horas',
-      user: 'Sistema'
-    },
-    {
-      id: '4',
-      type: 'export',
-      title: 'Reporte exportado',
-      description: 'Dashboard Total - Febrero 2024.xlsx',
-      timestamp: 'hace 3 horas',
-      user: 'Admin'
-    },
-    {
-      id: '5',
-      type: 'upload',
-      title: 'Archivo de flujo cargado',
-      description: 'FAMISANAR - Febrero 2024 (892 registros)',
-      timestamp: 'hace 4 horas',
-      user: 'Ana García'
-    }
-  ];
-
-  const formatGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Buenos días';
-    if (hour < 18) return 'Buenas tardes';
-    return 'Buenas noches';
+  const handleNavigate = (href: string) => {
+    navigate(href);
   };
 
-  return (
-    <div className="space-y-6">
-      {/* Header de Bienvenida Elegante */}
-      <div className="bg-gradient-to-r from-primary-900 via-primary-800 to-primary-700 rounded-2xl p-6 sm:p-8 text-white shadow-elegant relative overflow-hidden">
-        {/* Pattern Background */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-          }} />
+  const handleRefresh = () => {
+    refreshData();
+  };
+
+  const getGridCols = () => {
+    if (screenSize.isMobile) return 'grid-cols-1';
+    if (screenSize.isTablet) return 'grid-cols-2';
+    return 'grid-cols-4';
+  };
+
+  const getQuickActionCols = () => {
+    if (screenSize.isMobile) return 'grid-cols-1';
+    if (screenSize.isTablet) return 'grid-cols-2';
+    return 'grid-cols-3';
+  };
+
+  // Componente de estado de carga
+  if (loading) {
+    return (
+      <div className={`
+        min-h-screen bg-gray-50
+        ${screenSize.isMobile ? 'p-4' : screenSize.isTablet ? 'p-6' : 'p-8'}
+      `}>
+        {/* Header skeleton */}
+        <div className="mb-8">
+          <div className="h-8 bg-gray-200 rounded-lg w-64 mb-2 animate-pulse"></div>
+          <div className="h-4 bg-gray-200 rounded-lg w-96 animate-pulse"></div>
         </div>
-        
-        <div className="relative flex items-center justify-between">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center space-x-2 mb-3">
-              <SparklesIcon className="w-6 h-6 text-yellow-300" />
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">
-                {formatGreeting()}, {user?.name?.split(' ')[0] || 'Usuario'}!
-              </h1>
-            </div>
-            <p className="text-primary-100 text-sm sm:text-base mb-2">
-              Bienvenido al SIstema de gestión de cartera - Alcaldía de Barranquilla
-            </p>
-            <div className="flex items-center space-x-4 text-xs sm:text-sm text-primary-200">
-              <span>📅 {new Date().toLocaleDateString('es-CO', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}</span>
-              <span>🕐 {new Date().toLocaleTimeString('es-CO', { 
-                hour: '2-digit', 
-                minute: '2-digit'
-              })}</span>
-            </div>
-          </div>
-          <div className="hidden sm:block flex-shrink-0 ml-6">
-            <div className="w-16 h-16 lg:w-20 lg:h-20 bg-white bg-opacity-20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
-              <ChartBarIcon className="w-8 h-8 lg:w-10 lg:h-10 text-white" />
-            </div>
-          </div>
+
+        {/* Stats skeleton */}
+        <div className={`grid gap-6 mb-8 ${getGridCols()}`}>
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-32 bg-gray-200 rounded-xl animate-pulse"></div>
+          ))}
+        </div>
+
+        {/* Charts skeleton */}
+        <div className={`
+          grid gap-6 mb-8
+          ${screenSize.isMobile ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'}
+        `}>
+          <div className="h-80 bg-gray-200 rounded-xl animate-pulse"></div>
+          <div className="h-80 bg-gray-200 rounded-xl animate-pulse"></div>
         </div>
       </div>
+    );
+  }
 
-      {/* Filtros y Título */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-primary-900 flex items-center space-x-2">
-            <ArrowTrendingUpIcon className="w-6 h-6 text-primary-600" />
-            <span>Resumen General</span>
-          </h2>
-          <p className="text-gray-600 text-sm mt-1">Métricas principales del sistema en tiempo real</p>
-        </div>
-        <div className="flex items-center space-x-3 bg-white p-3 rounded-xl shadow-sm border border-gray-200">
-          <CalendarDaysIcon className="w-5 h-5 text-primary-600" />
-          <select 
-            value={selectedPeriod}
-            onChange={(e) => setSelectedPeriod(e.target.value)}
-            className="bg-transparent border-none focus:outline-none focus:ring-0 text-sm font-medium text-primary-900"
+  // Componente de error
+  if (error) {
+    return (
+      <div className={`
+        min-h-screen bg-gray-50 flex items-center justify-center
+        ${screenSize.isMobile ? 'p-4' : 'p-8'}
+      `}>
+        <div className="text-center">
+          <ExclamationTriangleIcon className="w-16 h-16 text-danger-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Error al cargar el dashboard</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={handleRefresh}
+            className="bg-primary-500 text-white px-4 py-2 rounded-lg hover:bg-primary-600 transition-colors"
           >
-            <option value="week">Esta semana</option>
-            <option value="month">Este mes</option>
-            <option value="quarter">Este trimestre</option>
-            <option value="year">Este año</option>
-          </select>
+            Reintentar
+          </button>
         </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`
+      min-h-screen bg-gray-50
+      ${screenSize.isMobile ? 'p-4' : screenSize.isTablet ? 'p-6' : 'p-8'}
+    `}>
+      {/* Header del Dashboard */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-2">
+          <h1 className={`
+            font-bold text-gray-900
+            ${screenSize.isMobile ? 'text-2xl' : 'text-3xl'}
+          `}>
+            Dashboard Principal
+          </h1>
+          <div className="flex items-center space-x-4">
+            {/* Botón de refresh */}
+            <button
+              onClick={handleRefresh}
+              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              title="Actualizar datos"
+            >
+              <ArrowUpIcon className="w-5 h-5 text-gray-600" />
+            </button>
+            
+            <div className="flex items-center space-x-2">
+              <CalendarDaysIcon className="w-5 h-5 text-gray-400" />
+              <span className="text-sm text-gray-600">
+                {new Date().toLocaleDateString('es-CO', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })}
+              </span>
+            </div>
+          </div>
+        </div>
+        <p className={`
+          text-gray-600
+          ${screenSize.isMobile ? 'text-sm' : 'text-base'}
+        `}>
+          Bienvenido de vuelta, <span className="font-semibold">{user?.name}</span>. 
+          Aquí tienes un resumen de la actividad de la plataforma.
+        </p>
       </div>
 
       {/* Tarjetas de Estadísticas */}
-      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map((stat, index) => (
-          <StatCard key={index} {...stat} />
+      <div className={`grid gap-6 mb-8 ${getGridCols()}`}>
+        {statsCards.map((stat) => (
+          <StatCard key={stat.id} stat={stat} screenSize={screenSize} />
         ))}
       </div>
 
-      {/* Acciones Rápidas y Actividad Reciente */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Acciones Rápidas */}
-        <div className="xl:col-span-1">
-          <div className="card p-6">
-            <div className="flex items-center space-x-2 mb-6">
-              <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
-                <SparklesIcon className="w-4 h-4 text-white" />
+      {/* Gráficos Principales */}
+      <div className={`
+        grid gap-6 mb-8
+        ${screenSize.isMobile ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'}
+      `}>
+        {/* Gráfico de Evolución de Cartera */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className={`
+              font-semibold text-gray-900
+              ${screenSize.isMobile ? 'text-lg' : 'text-xl'}
+            `}>
+              Evolución de Cartera 2025
+            </h3>
+            <select
+              value={selectedPeriod}
+              onChange={(e) => setSelectedPeriod(e.target.value)}
+              className="text-sm border border-gray-300 rounded-lg px-3 py-1 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+            >
+              <option value="month">Último año</option>
+              <option value="quarter">Último trimestre</option>
+              <option value="year">Últimos 3 años</option>
+            </select>
+          </div>
+          <div className={`${screenSize.isMobile ? 'h-64' : 'h-80'}`}>
+            {chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData}>
+                  <defs>
+                    <linearGradient id="colorCartera" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.05}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis 
+                    dataKey="month" 
+                    tick={{ fontSize: screenSize.isMobile ? 10 : 12 }}
+                    stroke="#6b7280"
+                  />
+                  <YAxis 
+                    tick={{ fontSize: screenSize.isMobile ? 10 : 12 }}
+                    stroke="#6b7280"
+                    tickFormatter={(value) => formatCurrency(value, true)}
+                  />
+                  <Tooltip 
+                    formatter={(value: number) => [formatCurrency(value), 'Cartera']}
+                    labelStyle={{ color: '#374151' }}
+                    contentStyle={{ 
+                      backgroundColor: 'white', 
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      fontSize: screenSize.isMobile ? '12px' : '14px'
+                    }}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="cartera" 
+                    stroke="#3b82f6" 
+                    strokeWidth={2}
+                    fillOpacity={1} 
+                    fill="url(#colorCartera)" 
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-500">
+                <div className="text-center">
+                  <ChartBarIcon className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                  <p>No hay datos disponibles</p>
+                </div>
               </div>
-              <h3 className="text-lg font-bold text-primary-900">Acciones Rápidas</h3>
-            </div>
-            <div className="space-y-4">
-              {quickActions.map((action, index) => (
-                <QuickAction key={index} {...action} />
-              ))}
-            </div>
+            )}
           </div>
         </div>
 
-        {/* Actividad Reciente */}
-        <div className="xl:col-span-2">
-          <div className="card p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                  <ClockIcon className="w-4 h-4 text-white" />
+        {/* Distribución por EPS */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h3 className={`
+            font-semibold text-gray-900 mb-6
+            ${screenSize.isMobile ? 'text-lg' : 'text-xl'}
+          `}>
+            Distribución por EPS
+          </h3>
+          <div className={`${screenSize.isMobile ? 'h-64' : 'h-80'}`}>
+            {epsDistribution.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={epsDistribution}
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={screenSize.isMobile ? 60 : 80}
+                    fill="#8884d8"
+                    dataKey="value"
+                    label={({ name, percent }: { name?: string; percent?: number }) => 
+                      `${name || 'N/A'} ${((percent || 0) * 100).toFixed(0)}%`
+                    }
+                    labelLine={false}
+                    fontSize={screenSize.isMobile ? 10 : 12}
+                  >
+                    {epsDistribution.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    formatter={(value: number, name) => [
+                      `${value}%`, 
+                      'Participación'
+                    ]}
+                    contentStyle={{ 
+                      backgroundColor: 'white', 
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      fontSize: screenSize.isMobile ? '12px' : '14px'
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-500">
+                <div className="text-center">
+                  <BuildingLibraryIcon className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                  <p>No hay datos de EPS disponibles</p>
                 </div>
-                <h3 className="text-lg font-bold text-primary-900">Actividad Reciente</h3>
               </div>
-              <a 
-                href="/activity" 
-                className="text-sm text-primary-600 hover:text-primary-800 font-semibold transition-colors"
-              >
-                Ver todas →
-              </a>
-            </div>
-            <RecentActivity activities={recentActivities} />
+            )}
           </div>
+        </div>
+      </div>
+
+      {/* Acciones Rápidas */}
+      <div className="mb-8">
+        <h2 className={`
+          font-semibold text-gray-900 mb-6
+          ${screenSize.isMobile ? 'text-xl' : 'text-2xl'}
+        `}>
+          Acciones Rápidas
+        </h2>
+        <div className={`grid gap-4 ${getQuickActionCols()}`}>
+          {quickActions.map((action) => (
+            <QuickActionCard 
+              key={action.id} 
+              action={action} 
+              screenSize={screenSize}
+              onNavigate={handleNavigate}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Actividad Reciente */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-8">
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h2 className={`
+              font-semibold text-gray-900
+              ${screenSize.isMobile ? 'text-xl' : 'text-2xl'}
+            `}>
+              Actividad Reciente
+            </h2>
+            <div className="flex items-center space-x-2">
+              <button 
+                onClick={refreshData}
+                className="text-sm text-gray-500 hover:text-primary-600 font-medium flex items-center space-x-1"
+                title="Actualizar actividades"
+              >
+                <ArrowUpIcon className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={() => navigate('/reportes/mensuales')}
+                className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center space-x-1"
+              >
+                <span>Ver todo</span>
+                <EyeIcon className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="divide-y divide-gray-100">
+          {recentActivities.length > 0 ? (
+            recentActivities.map((activity) => (
+              <RecentActivityItem 
+                key={activity.id} 
+                activity={{
+                  ...activity,
+                  timestamp: formatTimeAgo(activity.timestamp)
+                }} 
+                screenSize={screenSize}
+              />
+            ))
+          ) : (
+            <div className="p-8 text-center text-gray-500">
+              <ClockIcon className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+              <p>No hay actividades recientes</p>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Estado del Sistema */}
-      <div className="card p-6">
-        <div className="flex items-center space-x-2 mb-6">
-          <div className="w-8 h-8 bg-gradient-to-br from-success-500 to-success-600 rounded-lg flex items-center justify-center">
-            <ChartBarIcon className="w-4 h-4 text-white" />
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h3 className={`
+              font-semibold text-gray-900
+              ${screenSize.isMobile ? 'text-lg' : 'text-xl'}
+            `}>
+              Estado del Sistema
+            </h3>
+            <button
+              onClick={refreshSystemStatus}
+              className="text-sm text-gray-500 hover:text-primary-600 font-medium flex items-center space-x-1"
+              title="Actualizar estado"
+            >
+              <ArrowUpIcon className="w-4 h-4" />
+              <span>Actualizar</span>
+            </button>
           </div>
-          <h3 className="text-lg font-bold text-primary-900">Estado del Sistema</h3>
         </div>
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-          <div className="flex items-center space-x-3 p-4 bg-gradient-to-r from-success-50 to-success-100 rounded-xl border border-success-200">
-            <div className="w-3 h-3 bg-success-500 rounded-full animate-pulse flex-shrink-0"></div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-success-900">Base de Datos</p>
-              <p className="text-xs text-success-700">Conectada y funcionando</p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-3 p-4 bg-gradient-to-r from-success-50 to-success-100 rounded-xl border border-success-200">
-            <div className="w-3 h-3 bg-success-500 rounded-full animate-pulse flex-shrink-0"></div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-success-900">API Backend</p>
-              <p className="text-xs text-success-700">Respondiendo correctamente</p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-3 p-4 bg-gradient-to-r from-success-50 to-success-100 rounded-xl border border-success-200">
-            <div className="w-3 h-3 bg-success-500 rounded-full animate-pulse flex-shrink-0"></div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-success-900">Almacenamiento</p>
-              <p className="text-xs text-success-700">85% disponible</p>
-            </div>
+        <div className="p-6">
+          <div className={`
+            grid gap-4
+            ${screenSize.isMobile ? 'grid-cols-1' : 'grid-cols-2 lg:grid-cols-3'}
+          `}>
+            {systemStatus && (
+              <>
+                <div className={`
+                  flex items-center space-x-3 p-4 rounded-xl border
+                  ${systemStatus.database.status === 'online' 
+                    ? 'bg-gradient-to-r from-success-50 to-success-100 border-success-200' 
+                    : systemStatus.database.status === 'warning'
+                    ? 'bg-gradient-to-r from-warning-50 to-warning-100 border-warning-200'
+                    : 'bg-gradient-to-r from-danger-50 to-danger-100 border-danger-200'
+                  }
+                `}>
+                  <div className={`
+                    w-3 h-3 rounded-full flex-shrink-0
+                    ${systemStatus.database.status === 'online' 
+                      ? 'bg-success-500 animate-pulse' 
+                      : systemStatus.database.status === 'warning'
+                      ? 'bg-warning-500'
+                      : 'bg-danger-500'
+                    }
+                  `}></div>
+                  <div className="min-w-0">
+                    <p className={`
+                      font-semibold
+                      ${screenSize.isMobile ? 'text-sm' : 'text-sm'}
+                      ${systemStatus.database.status === 'online' 
+                        ? 'text-success-900' 
+                        : systemStatus.database.status === 'warning'
+                        ? 'text-warning-900'
+                        : 'text-danger-900'
+                      }
+                    `}>
+                      Base de Datos
+                    </p>
+                    <p className={`
+                      ${screenSize.isMobile ? 'text-xs' : 'text-xs'}
+                      ${systemStatus.database.status === 'online' 
+                        ? 'text-success-700' 
+                        : systemStatus.database.status === 'warning'
+                        ? 'text-warning-700'
+                        : 'text-danger-700'
+                      }
+                    `}>
+                      {systemStatus.database.message}
+                    </p>
+                  </div>
+                </div>
+
+                <div className={`
+                  flex items-center space-x-3 p-4 rounded-xl border
+                  ${systemStatus.api.status === 'online' 
+                    ? 'bg-gradient-to-r from-success-50 to-success-100 border-success-200' 
+                    : systemStatus.api.status === 'warning'
+                    ? 'bg-gradient-to-r from-warning-50 to-warning-100 border-warning-200'
+                    : 'bg-gradient-to-r from-danger-50 to-danger-100 border-danger-200'
+                  }
+                `}>
+                  <div className={`
+                    w-3 h-3 rounded-full flex-shrink-0
+                    ${systemStatus.api.status === 'online' 
+                      ? 'bg-success-500 animate-pulse' 
+                      : systemStatus.api.status === 'warning'
+                      ? 'bg-warning-500'
+                      : 'bg-danger-500'
+                    }
+                  `}></div>
+                  <div className="min-w-0">
+                    <p className={`
+                      font-semibold
+                      ${screenSize.isMobile ? 'text-sm' : 'text-sm'}
+                      ${systemStatus.api.status === 'online' 
+                        ? 'text-success-900' 
+                        : systemStatus.api.status === 'warning'
+                        ? 'text-warning-900'
+                        : 'text-danger-900'
+                      }
+                    `}>
+                      API Backend
+                    </p>
+                    <p className={`
+                      ${screenSize.isMobile ? 'text-xs' : 'text-xs'}
+                      ${systemStatus.api.status === 'online' 
+                        ? 'text-success-700' 
+                        : systemStatus.api.status === 'warning'
+                        ? 'text-warning-700'
+                        : 'text-danger-700'
+                      }
+                    `}>
+                      {systemStatus.api.message}
+                      {systemStatus.api.responseTime > 0 && (
+                        <span className="ml-1">({systemStatus.api.responseTime}ms)</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                <div className={`
+                  flex items-center space-x-3 p-4 rounded-xl border
+                  ${systemStatus.storage.status === 'online' 
+                    ? 'bg-gradient-to-r from-success-50 to-success-100 border-success-200' 
+                    : systemStatus.storage.status === 'warning'
+                    ? 'bg-gradient-to-r from-warning-50 to-warning-100 border-warning-200'
+                    : 'bg-gradient-to-r from-danger-50 to-danger-100 border-danger-200'
+                  }
+                `}>
+                  <div className={`
+                    w-3 h-3 rounded-full flex-shrink-0
+                    ${systemStatus.storage.status === 'online' 
+                      ? 'bg-success-500 animate-pulse' 
+                      : systemStatus.storage.status === 'warning'
+                      ? 'bg-warning-500'
+                      : 'bg-danger-500'
+                    }
+                  `}></div>
+                  <div className="min-w-0">
+                    <p className={`
+                      font-semibold
+                      ${screenSize.isMobile ? 'text-sm' : 'text-sm'}
+                      ${systemStatus.storage.status === 'online' 
+                        ? 'text-success-900' 
+                        : systemStatus.storage.status === 'warning'
+                        ? 'text-warning-900'
+                        : 'text-danger-900'
+                      }
+                    `}>
+                      Almacenamiento
+                    </p>
+                    <p className={`
+                      ${screenSize.isMobile ? 'text-xs' : 'text-xs'}
+                      ${systemStatus.storage.status === 'online' 
+                        ? 'text-success-700' 
+                        : systemStatus.storage.status === 'warning'
+                        ? 'text-warning-700'
+                        : 'text-danger-700'
+                      }
+                    `}>
+                      {systemStatus.storage.message}
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
     </div>
   );
 };
-
-export default Dashboard;

@@ -1,0 +1,514 @@
+/* frontend/src/styles/dashboard.css */
+
+/* Animaciones personalizadas para el dashboard */
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -468px 0;
+  }
+  100% {
+    background-position: 468px 0;
+  }
+}
+
+@keyframes countUp {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Clases de animación */
+.animate-slide-in-up {
+  animation: slideInUp 0.6s ease-out forwards;
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.5s ease-out forwards;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.5s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.4s ease-out forwards;
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 3s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer 2s linear infinite;
+  background: linear-gradient(to right, #f6f7f8 8%, #edeef1 18%, #f6f7f8 33%);
+  background-size: 800px 104px;
+}
+
+.animate-count-up {
+  animation: countUp 0.8s ease-out forwards;
+}
+
+/* Retrasos escalonados para animaciones */
+.delay-100 { animation-delay: 0.1s; }
+.delay-200 { animation-delay: 0.2s; }
+.delay-300 { animation-delay: 0.3s; }
+.delay-400 { animation-delay: 0.4s; }
+.delay-500 { animation-delay: 0.5s; }
+
+/* Estilos para las tarjetas de estadísticas */
+.stat-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #3b82f6, #06b6d4, #10b981);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.stat-card:hover::before {
+  opacity: 1;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border-color: #cbd5e1;
+}
+
+/* Estilos para iconos de estadísticas */
+.stat-icon {
+  background: linear-gradient(135deg, var(--icon-color) 0%, var(--icon-color-dark) 100%);
+  border-radius: 12px;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-icon::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  transform: translate(-50%, -50%);
+}
+
+.stat-card:hover .stat-icon::before {
+  width: 100%;
+  height: 100%;
+}
+
+.stat-card:hover .stat-icon {
+  transform: scale(1.1) rotate(5deg);
+}
+
+/* Estilos para gráficos */
+.chart-container {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.chart-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.02) 0%, rgba(16, 185, 129, 0.02) 100%);
+  pointer-events: none;
+}
+
+.chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+/* Estilos para acciones rápidas */
+.quick-action-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.quick-action-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--action-color);
+  transform: scaleY(0);
+  transition: transform 0.3s ease;
+}
+
+.quick-action-card:hover::before {
+  transform: scaleY(1);
+}
+
+.quick-action-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+  border-color: var(--action-color);
+}
+
+.quick-action-icon {
+  background: linear-gradient(135deg, var(--action-color) 0%, var(--action-color-dark) 100%);
+  border-radius: 10px;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.quick-action-card:hover .quick-action-icon {
+  transform: scale(1.1) rotate(-5deg);
+}
+
+/* Estilos para actividades recientes */
+.activity-item {
+  padding: 16px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  border-left: 3px solid transparent;
+}
+
+.activity-item:hover {
+  background-color: #f8fafc;
+  border-left-color: #3b82f6;
+  transform: translateX(4px);
+}
+
+.activity-status-success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.activity-status-error {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.activity-status-warning {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.activity-status-info {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+/* Estilos para estado del sistema */
+.system-status-card {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.system-status-online::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #10b981, #059669);
+}
+
+.system-status-warning {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border-color: #fed7aa;
+}
+
+.system-status-warning::before {
+  background: linear-gradient(90deg, #f59e0b, #d97706);
+}
+
+.system-status-offline {
+  background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%);
+  border-color: #fca5a5;
+}
+
+.system-status-offline::before {
+  background: linear-gradient(90deg, #ef4444, #dc2626);
+}
+
+.status-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  position: relative;
+}
+
+.status-indicator::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 50%;
+  background: inherit;
+  animation: pulse-slow 2s ease-in-out infinite;
+}
+
+/* Estados de carga */
+.loading-skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+.loading-stat-card {
+  height: 120px;
+  background: linear-gradient(90deg, #f8fafc 25%, #f1f5f9 50%, #f8fafc 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 12px;
+}
+
+.loading-chart {
+  height: 320px;
+  background: linear-gradient(90deg, #f8fafc 25%, #f1f5f9 50%, #f8fafc 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 16px;
+}
+
+/* Responsive design específico para dashboard */
+@media (max-width: 767px) {
+  .stat-card {
+    padding: 16px;
+  }
+  
+  .stat-icon {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .chart-container {
+    padding: 16px;
+  }
+  
+  .quick-action-card {
+    padding: 16px;
+  }
+  
+  .quick-action-icon {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .activity-item {
+    padding: 12px;
+  }
+  
+  .system-status-card {
+    padding: 12px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .stat-card {
+    padding: 20px;
+  }
+  
+  .chart-container {
+    padding: 20px;
+  }
+  
+  .quick-action-card {
+    padding: 18px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .dashboard-container {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  
+  .stat-card {
+    padding: 28px;
+  }
+  
+  .chart-container {
+    padding: 28px;
+  }
+  
+  .quick-action-card {
+    padding: 24px;
+  }
+}
+
+/* Tema oscuro (preparado para futuras implementaciones) */
+@media (prefers-color-scheme: dark) {
+  .dark-mode .stat-card {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border-color: #334155;
+    color: #f8fafc;
+  }
+  
+  .dark-mode .chart-container {
+    background: #1e293b;
+    border-color: #334155;
+  }
+  
+  .dark-mode .quick-action-card {
+    background: #1e293b;
+    border-color: #334155;
+    color: #f8fafc;
+  }
+  
+  .dark-mode .activity-item:hover {
+    background-color: #334155;
+  }
+}
+
+/* Accesibilidad mejorada */
+@media (prefers-reduced-motion: reduce) {
+  .stat-card,
+  .quick-action-card,
+  .activity-item,
+  .stat-icon,
+  .quick-action-icon {
+    transition: none;
+  }
+  
+  .animate-slide-in-up,
+  .animate-slide-in-left,
+  .animate-slide-in-right,
+  .animate-scale-in,
+  .animate-pulse-slow,
+  .animate-shimmer,
+  .animate-count-up {
+    animation: none;
+  }
+}
+
+/* Estados focus para accesibilidad */
+.stat-card:focus-within,
+.quick-action-card:focus,
+.activity-item:focus-within {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Estilos para impresión */
+@media print {
+  .stat-card,
+  .chart-container,
+  .quick-action-card {
+    break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #000;
+  }
+  
+  .animate-slide-in-up,
+  .animate-slide-in-left,
+  .animate-slide-in-right,
+  .animate-scale-in,
+  .animate-pulse-slow,
+  .animate-shimmer,
+  .animate-count-up {
+    animation: none;
+  }
+}

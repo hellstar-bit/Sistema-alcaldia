@@ -1,37 +1,36 @@
-// frontend/src/components/layout/Sidebar.tsx (corregida con ADRES agregado)
-import React, { useState, useEffect } from 'react';
+// Agregar una función helper para determinar si debe mostrar collapsed
+// frontend/src/components/layout/Sidebar.tsx
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   HomeIcon,
-  DocumentArrowUpIcon,
+  DocumentTextIcon,
   ChartBarIcon,
-  InformationCircleIcon,
+  UserGroupIcon,
+  Cog6ToothIcon,
+  Bars3Icon,
+  XMarkIcon,
   ChevronDownIcon,
   ChevronRightIcon,
-  XMarkIcon,
-  CreditCardIcon,
-  BanknotesIcon,
+  PlusIcon,
+  EyeIcon,
+  PencilIcon,
   BuildingLibraryIcon,
-  ChartPieIcon,
-  DocumentTextIcon,
-  TableCellsIcon,
-  CogIcon,
-  UserGroupIcon,
-  DocumentChartBarIcon,
-  ServerIcon,
-  Bars3Icon,
-  WrenchScrewdriverIcon,
-  BuildingOfficeIcon,
-  AcademicCapIcon
+  BanknotesIcon,
+  ClipboardDocumentListIcon,
+  DocumentArrowUpIcon,
+  ArrowUpTrayIcon,
+  CalendarIcon,
+  ClockIcon
 } from '@heroicons/react/24/outline';
 
 interface MenuItem {
   id: string;
   label: string;
-  icon: React.ComponentType<any>;
   href?: string;
+  icon: React.ComponentType<any>;
   children?: MenuItem[];
-  badge?: string | number;
+  badge?: string;
 }
 
 interface SidebarProps {
@@ -41,12 +40,72 @@ interface SidebarProps {
   onCollapseToggle: () => void;
 }
 
+// Hook personalizado para detectar el tamaño de pantalla
+const useScreenSize = () => {
+  const [screenSize, setScreenSize] = useState({
+    width: typeof window !== 'undefined' ? window.innerWidth : 0,
+    height: typeof window !== 'undefined' ? window.innerHeight : 0,
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      setScreenSize({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return {
+    ...screenSize,
+    isMobile: screenSize.width < 768,
+    isTablet: screenSize.width >= 768 && screenSize.width < 1024,
+    isDesktop: screenSize.width >= 1024,
+    isLarge: screenSize.width >= 1280,
+  };
+};
+
+// Hook para manejar gestos touch
+const useSwipeGesture = (onSwipeLeft: () => void, onSwipeRight: () => void) => {
+  const touchStartX = useRef<number>(0);
+  const touchEndX = useRef<number>(0);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.changedTouches[0].screenX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    touchEndX.current = e.changedTouches[0].screenX;
+    handleSwipe();
+  };
+
+  const handleSwipe = () => {
+    const swipeThreshold = 50;
+    const swipeDistance = touchStartX.current - touchEndX.current;
+
+    if (Math.abs(swipeDistance) > swipeThreshold) {
+      if (swipeDistance > 0) {
+        onSwipeLeft();
+      } else {
+        onSwipeRight();
+      }
+    }
+  };
+
+  return { handleTouchStart, handleTouchEnd };
+};
+
+
+
 const menuItems: MenuItem[] = [
   {
     id: 'dashboard',
     label: 'Dashboard Principal',
+    href: '/dashboard',
     icon: HomeIcon,
-    href: '/dashboard'
   },
   {
     id: 'carga-informacion',
@@ -56,22 +115,22 @@ const menuItems: MenuItem[] = [
       {
         id: 'info-cartera',
         label: 'Información Cartera',
-        icon: CreditCardIcon,
-        href: '/carga/cartera'
+        href: '/carga/cartera',
+        icon: BanknotesIcon,
       },
       {
         id: 'info-flujo',
         label: 'Información Flujo',
-        icon: BanknotesIcon,
-        href: '/carga/flujo'
+        href: '/carga/flujo',
+        icon: BuildingLibraryIcon,
       },
-      {  // ✅ AGREGADO: Ítem para ADRES
+      {
         id: 'info-adres',
         label: 'Información ADRES',
-        icon: DocumentTextIcon,  // Ícono sugerido; cámbialo si quieres
-        href: '/carga/adres'
-      }
-    ]
+        href: '/carga/adres',
+        icon: ArrowUpTrayIcon,
+      },
+    ],
   },
   {
     id: 'dashboards-eps',
@@ -81,135 +140,134 @@ const menuItems: MenuItem[] = [
       {
         id: 'cartera-dashboard',
         label: 'Cartera',
-        icon: ChartPieIcon,
+        icon: BanknotesIcon,
         children: [
           {
             id: 'dashboard-periodo',
             label: 'Dashboard por Período',
-            icon: TableCellsIcon,
-            href: '/dashboards/cartera/periodo'
+            href: '/dashboards/cartera/periodo',
+            icon: CalendarIcon,
           },
           {
             id: 'dashboard-eps-ips',
             label: 'Dashboard EPS e IPS',
+            href: '/dashboards/cartera/eps-ips',
             icon: BuildingLibraryIcon,
-            href: '/dashboards/cartera/eps-ips'
           },
           {
             id: 'dashboard-ips',
             label: 'Dashboard IPS',
+            href: '/dashboards/cartera/ips',
             icon: BuildingLibraryIcon,
-            href: '/dashboards/cartera/ips'
           },
           {
             id: 'dashboard-total',
             label: 'Dashboard Total',
+            href: '/dashboards/cartera/total',
             icon: ChartBarIcon,
-            href: '/dashboards/cartera/total'
-          }
-        ]
+          },
+        ],
       },
       {
         id: 'flujo-dashboard',
         label: 'Flujo',
-        icon: BanknotesIcon,
+        icon: ClockIcon,
         children: [
           {
             id: 'dashboard-flujo',
             label: 'Dashboard Flujo',
+            href: '/dashboards/flujo',
             icon: ChartBarIcon,
-            href: '/dashboards/flujo'
-          }
-        ]
-      }
-    ]
+          },
+        ],
+      },
+    ],
   },
   {
     id: 'informacion-base',
     label: 'Información Base',
-    icon: InformationCircleIcon,
+    icon: DocumentTextIcon,
     children: [
       {
         id: 'base-cartera',
         label: 'Cartera',
-        icon: CreditCardIcon,
-        href: '/base/cartera'
+        href: '/base/cartera',
+        icon: BanknotesIcon,
       },
       {
         id: 'base-adres',
         label: 'ADRES',
+        href: '/base/adres',
         icon: DocumentTextIcon,
-        href: '/base/adres'
       },
       {
         id: 'base-flujo',
         label: 'Flujo',
-        icon: BanknotesIcon,
-        href: '/base/flujo'
-      }
-    ]
-  },
-  // NUEVO MÓDULO DE GESTIÓN
-  {
-    id: 'gestion',
-    label: 'Gestión EPS e IPS',
-    icon: WrenchScrewdriverIcon,
-    children: [
-      {
-        id: 'gestion-eps',
-        label: 'Gestión de EPS',
-        icon: BuildingOfficeIcon,
-        href: '/gestion/eps'
+        href: '/base/flujo',
+        icon: ClockIcon,
       },
-      {
-        id: 'gestion-ips',
-        label: 'Gestión de IPS',
-        icon: AcademicCapIcon,
-        href: '/gestion/ips'
-      }
-    ]
+    ],
   },
   {
     id: 'reportes',
-    label: 'Reportes y Análisis',
-    icon: DocumentChartBarIcon,
+    label: 'Reportes',
+    icon: DocumentTextIcon,
     children: [
       {
         id: 'reportes-mensuales',
         label: 'Reportes Mensuales',
+        href: '/reportes/mensuales',
         icon: DocumentTextIcon,
-        href: '/reportes/mensuales'
       },
       {
-        id: 'analisis-tendencias',
+        id: 'reportes-tendencias',
         label: 'Análisis de Tendencias',
+        href: '/reportes/tendencias',
         icon: ChartBarIcon,
-        href: '/reportes/tendencias'
-      }
-    ]
+      },
+    ],
+  },
+  {
+    id: 'gestion',
+    label: 'Gestión EPS/IPS',
+    icon: UserGroupIcon,
+    children: [
+      {
+        id: 'gestion-eps',
+        label: 'Gestión EPS',
+        href: '/gestion/eps',
+        icon: BuildingLibraryIcon,
+      },
+      {
+        id: 'gestion-ips',
+        label: 'Gestión IPS',
+        href: '/gestion/ips',
+        icon: BuildingLibraryIcon,
+      },
+    ],
   },
   {
     id: 'configuracion',
     label: 'Configuración',
-    icon: CogIcon,
+    icon: Cog6ToothIcon,
     children: [
       {
-        id: 'usuarios',
+        id: 'config-usuarios',
         label: 'Gestión de Usuarios',
+        href: '/config/usuarios',
         icon: UserGroupIcon,
-        href: '/config/usuarios'
       },
       {
-        id: 'parametros',
-        label: 'Parámetros del Sistema',
-        icon: CogIcon,
-        href: '/config/parametros'
-      }
-    ]
-  }
+        id: 'config-sistema',
+        label: 'Configuración del Sistema',
+        href: '/config/sistema',
+        icon: Cog6ToothIcon,
+      },
+    ],
+  },
 ];
 
-const MenuItemComponent: React.FC<{
+interface MenuItemComponentProps {
   item: MenuItem;
   level: number;
   currentPath: string;
@@ -217,17 +275,28 @@ const MenuItemComponent: React.FC<{
   isCollapsed: boolean;
   expandedItems: Set<string>;
   setExpandedItems: React.Dispatch<React.SetStateAction<Set<string>>>;
-}> = ({ item, level, currentPath, onItemClick, isCollapsed, expandedItems, setExpandedItems }) => {
-  const hasChildren = item.children && item.children.length > 0;
+  screenSize: any;
+  shouldBeCollapsed: () => boolean;
+}
+
+const MenuItemComponent: React.FC<MenuItemComponentProps> = ({
+  item,
+  level,
+  currentPath,
+  onItemClick,
+  isCollapsed,
+  expandedItems,
+  setExpandedItems,
+  screenSize,
+  shouldBeCollapsed
+}) => {
   const isActive = currentPath === item.href;
   const isExpanded = expandedItems.has(item.id);
-  const isParentActive = item.children?.some(child => 
-    child.href === currentPath || 
-    child.children?.some(grandChild => grandChild.href === currentPath)
-  );
+  const hasChildren = item.children && item.children.length > 0;
+  const Icon = item.icon;
 
   const handleClick = () => {
-    if (hasChildren && !isCollapsed) {
+    if (hasChildren) {
       const newExpanded = new Set(expandedItems);
       if (isExpanded) {
         newExpanded.delete(item.id);
@@ -235,83 +304,84 @@ const MenuItemComponent: React.FC<{
         newExpanded.add(item.id);
       }
       setExpandedItems(newExpanded);
-    } else if (!hasChildren) {
+    } else {
       onItemClick(item);
     }
   };
 
-  const paddingLeft = isCollapsed ? 'px-3' : 
-    level === 0 ? 'pl-4 pr-3' : 
-    level === 1 ? 'pl-8 pr-3' : 'pl-12 pr-3';
-  
-  const textSize = level === 0 ? 'text-sm' : 'text-xs';
+  const getItemPadding = () => {
+    if (shouldBeCollapsed() && level === 0) return 'px-3';
+    if (level === 0) return screenSize.isMobile ? 'px-4' : 'px-4';
+    return screenSize.isMobile ? `pl-${8 + level * 4} pr-4` : `pl-${6 + level * 4} pr-4`;
+  };
 
-  // Tooltip para cuando está colapsado
-  const showTooltip = isCollapsed && level === 0;
+  const getItemHeight = () => {
+    if (screenSize.isMobile) return 'h-12';
+    return shouldBeCollapsed() ? 'h-11' : 'h-10';
+  };
 
   return (
     <>
-      <div className="relative group">
-        <button
-          onClick={handleClick}
-          className={`
-            w-full flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} 
-            py-3 rounded-lg text-left transition-all duration-200 group/btn
-            ${paddingLeft} ${textSize}
-            ${isActive 
-              ? 'bg-primary-900 text-white shadow-md' 
-              : isParentActive 
-                ? 'bg-primary-50 text-primary-900 border border-primary-200' 
-                : 'text-gray-700 hover:bg-gray-100 hover:text-primary-900'
-            }
-          `}
-        >
-          <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'} min-w-0 flex-1`}>
-            <item.icon 
-              className={`
-                flex-shrink-0 w-5 h-5 transition-colors duration-200
-                ${isActive ? 'text-white' : isParentActive ? 'text-primary-900' : 'text-gray-500 group-hover/btn:text-primary-900'}
-              `}
-            />
-            {!isCollapsed && (
-              <>
-                <span className="font-medium truncate">{item.label}</span>
-                {item.badge && (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success-100 text-success-800">
-                    {item.badge}
-                  </span>
-                )}
-              </>
-            )}
-          </div>
+      <button
+        onClick={handleClick}
+        className={`
+          w-full flex items-center ${getItemPadding()} ${getItemHeight()}
+          text-left rounded-lg transition-all duration-200 ease-in-out
+          group relative overflow-hidden
+          ${isActive 
+            ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-md' 
+            : 'text-gray-700 hover:bg-gray-100 hover:text-primary-900'
+          }
+          ${screenSize.isMobile ? 'text-base' : 'text-sm'}
+          ${shouldBeCollapsed() && level === 0 ? 'justify-center' : 'justify-between'}
+          focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-opacity-50
+        `}
+        title={shouldBeCollapsed() ? item.label : undefined}
+      >
+        <div className="flex items-center space-x-3 min-w-0 flex-1">
+          <Icon className={`
+            ${screenSize.isMobile ? 'w-6 h-6' : 'w-5 h-5'} 
+            flex-shrink-0
+            ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-primary-900'}
+            transition-colors duration-200
+          `} />
           
-          {hasChildren && !isCollapsed && (
-            <div className="flex-shrink-0 ml-2">
-              {isExpanded ? (
-                <ChevronDownIcon className="w-4 h-4 text-gray-400" />
-              ) : (
-                <ChevronRightIcon className="w-4 h-4 text-gray-400" />
-              )}
-            </div>
+          {!shouldBeCollapsed() && (
+            <span className={`
+              font-medium truncate
+              ${screenSize.isMobile ? 'text-base' : 'text-sm'}
+            `}>
+              {item.label}
+            </span>
           )}
-        </button>
+          
+          {!shouldBeCollapsed() && item.badge && (
+            <span className="px-2 py-1 text-xs bg-success-100 text-success-800 rounded-full font-medium">
+              {item.badge}
+            </span>
+          )}
+        </div>
 
-        {/* Tooltip para modo colapsado */}
-        {showTooltip && (
-          <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 whitespace-nowrap">
-            {item.label}
-            {item.badge && (
-              <span className="ml-2 bg-success-600 text-white text-xs px-1 py-0.5 rounded">
-                {item.badge}
-              </span>
-            )}
-            <div className="absolute top-1/2 left-0 transform -translate-y-1/2 -translate-x-1 w-2 h-2 bg-gray-900 rotate-45"></div>
-          </div>
+        {!shouldBeCollapsed() && hasChildren && (
+          <ChevronDownIcon className={`
+            w-4 h-4 flex-shrink-0 transition-transform duration-200
+            ${isExpanded ? 'rotate-180' : ''}
+            ${isActive ? 'text-white' : 'text-gray-400'}
+          `} />
         )}
-      </div>
 
-      {hasChildren && isExpanded && !isCollapsed && (
-        <div className="mt-1 space-y-1">
+        {/* Indicador de activo */}
+        {isActive && (
+          <div className="absolute left-0 top-0 w-1 h-full bg-white rounded-r-full" />
+        )}
+      </button>
+
+      {/* Submenu */}
+      {hasChildren && isExpanded && !shouldBeCollapsed() && (
+        <div className={`
+          space-y-1 transition-all duration-300 ease-in-out
+          ${screenSize.isMobile ? 'mt-1 mb-2' : 'mt-1'}
+        `}>
           {item.children!.map((child) => (
             <MenuItemComponent
               key={child.id}
@@ -322,6 +392,8 @@ const MenuItemComponent: React.FC<{
               isCollapsed={isCollapsed}
               expandedItems={expandedItems}
               setExpandedItems={setExpandedItems}
+              screenSize={screenSize}
+              shouldBeCollapsed={shouldBeCollapsed}
             />
           ))}
         </div>
@@ -330,10 +402,31 @@ const MenuItemComponent: React.FC<{
   );
 };
 
-export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, isCollapsed, onCollapseToggle }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ 
+  isOpen, 
+  onToggle, 
+  isCollapsed, 
+  onCollapseToggle 
+}) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const screenSize = useScreenSize();
+  const sidebarRef = useRef<HTMLDivElement>(null);
+
+  // Gestión de swipe para mobile
+  const { handleTouchStart, handleTouchEnd } = useSwipeGesture(
+    () => {
+      if (screenSize.isMobile && isOpen) {
+        onToggle();
+      }
+    },
+    () => {
+      if (screenSize.isMobile && !isOpen) {
+        onToggle();
+      }
+    }
+  );
 
   // Auto-expandir elementos activos
   useEffect(() => {
@@ -358,68 +451,136 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, isCollapsed,
     }
   }, [location.pathname]);
 
+  // Cerrar sidebar en mobile cuando cambia la ruta
+  useEffect(() => {
+    if (screenSize.isMobile && isOpen) {
+      onToggle();
+    }
+  }, [location.pathname]);
+
+  // Auto-colapsar en tablet si está expandido
+  useEffect(() => {
+    if (screenSize.isTablet && !isCollapsed) {
+      onCollapseToggle();
+    }
+  }, [screenSize.isTablet]);
+
   const handleItemClick = (item: MenuItem) => {
     if (item.href) {
       navigate(item.href);
-      console.log('Navigating to:', item.href);
-      if (window.innerWidth < 1024) {
-        onToggle();
-      }
     }
+  };
+
+  // Calcular ancho del sidebar basado en el tamaño de pantalla
+  const getSidebarWidth = () => {
+    if (screenSize.isMobile) return 'w-80'; // Siempre 320px en mobile, sin colapsar
+    if (screenSize.isTablet) return isCollapsed ? 'w-16' : 'w-72'; // 288px en tablet
+    return isCollapsed ? 'w-16' : 'w-80'; // 320px en desktop
+  };
+
+  // Determinar si el sidebar debe estar colapsado (solo en desktop/tablet)
+  const shouldBeCollapsed = () => {
+    if (screenSize.isMobile) return false; // Nunca colapsado en móvil
+    return isCollapsed;
+  };
+
+  const getSidebarClasses = () => {
+    const baseClasses = `
+      fixed top-0 left-0 h-full bg-white shadow-xl z-30 
+      transition-all duration-300 ease-in-out flex flex-col
+      ${getSidebarWidth()}
+    `;
+
+    if (screenSize.isMobile) {
+      return `${baseClasses} ${isOpen ? 'translate-x-0' : '-translate-x-full'}`;
+    }
+
+    if (screenSize.isTablet) {
+      return `${baseClasses} ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 md:static md:z-auto`;
+    }
+
+    return `${baseClasses} translate-x-0 static z-auto`;
   };
 
   return (
     <>
-      {/* Overlay para mobile */}
-      {isOpen && (
+      {/* Overlay para mobile y tablet */}
+      {isOpen && (screenSize.isMobile || screenSize.isTablet) && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
+          className="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden lg:hidden"
           onClick={onToggle}
         />
       )}
 
       {/* Sidebar Principal */}
-      <div className={`
-        fixed top-0 left-0 h-full bg-white shadow-xl z-30 transition-all duration-300 ease-in-out
-        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-        ${isCollapsed ? 'w-16' : 'w-80'}
-        lg:translate-x-0 lg:static lg:z-auto
-        flex flex-col
-      `}>
+      <div 
+        ref={sidebarRef}
+        className={getSidebarClasses()}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         {/* Header del Sidebar */}
-        <div className={`flex items-center ${isCollapsed ? 'justify-center px-2' : 'justify-between px-4'} py-4 border-b border-gray-200 bg-gradient-to-r from-primary-900 to-primary-800 text-white flex-shrink-0`}>
-          {!isCollapsed && (
+        <div className={`
+          flex items-center py-4 border-b border-gray-200 
+          bg-gradient-to-r from-primary-900 to-primary-800 text-white flex-shrink-0
+          ${shouldBeCollapsed() ? 'justify-center px-2' : 'justify-between px-4'}
+          ${screenSize.isMobile ? 'h-16' : 'h-14'}
+        `}>
+          {!shouldBeCollapsed() && (
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
-                <span className="text-primary-900 font-bold text-sm">SGP</span>
+              <div className={`
+                bg-white rounded-lg flex items-center justify-center
+                ${screenSize.isMobile ? 'w-10 h-10' : 'w-8 h-8'}
+              `}>
+                <span className={`
+                  text-primary-900 font-bold
+                  ${screenSize.isMobile ? 'text-base' : 'text-sm'}
+                `}>
+                  SGP
+                </span>
               </div>
               <div>
-                <h2 className="text-base font-bold">Sistema de Gestión</h2>
-                <p className="text-xs text-primary-200">Presupuestal</p>
+                <h2 className={`
+                  font-bold
+                  ${screenSize.isMobile ? 'text-lg' : 'text-base'}
+                `}>
+                  Sistema de Gestión
+                </h2>
+                <p className={`
+                  text-primary-200
+                  ${screenSize.isMobile ? 'text-sm' : 'text-xs'}
+                `}>
+                  Presupuestal
+                </p>
               </div>
             </div>
           )}
           
           {/* Botón de colapsar para desktop */}
-          <button
-            onClick={onCollapseToggle}
-            className="hidden lg:block p-2 rounded-lg hover:bg-primary-800 transition-colors"
-          >
-            <Bars3Icon className="w-4 h-4" />
-          </button>
+          {screenSize.isDesktop && (
+            <button
+              onClick={onCollapseToggle}
+              className="p-2 rounded-lg hover:bg-primary-800 transition-colors"
+              title={isCollapsed ? 'Expandir sidebar' : 'Contraer sidebar'}
+            >
+              <Bars3Icon className="w-4 h-4" />
+            </button>
+          )}
 
-          {/* Botón de cerrar para mobile */}
-          <button
-            onClick={onToggle}
-            className="lg:hidden p-2 rounded-lg hover:bg-primary-800 transition-colors"
-          >
-            <XMarkIcon className="w-4 h-4" />
-          </button>
+          {/* Botón de cerrar para mobile/tablet */}
+          {(screenSize.isMobile || screenSize.isTablet) && (
+            <button
+              onClick={onToggle}
+              className="p-2 rounded-lg hover:bg-primary-800 transition-colors"
+            >
+              <XMarkIcon className={`${screenSize.isMobile ? 'w-6 h-6' : 'w-5 h-5'}`} />
+            </button>
+          )}
         </div>
 
         {/* Navegación */}
-        <nav className="flex-1 overflow-y-auto py-4">
-          <div className={`space-y-2 ${isCollapsed ? 'px-2' : 'px-4'}`}>
+        <nav className="flex-1 overflow-y-auto py-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+          <div className={`space-y-1 ${shouldBeCollapsed() ? 'px-2' : 'px-4'}`}>
             {menuItems.map((item) => (
               <MenuItemComponent
                 key={item.id}
@@ -427,50 +588,74 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, isCollapsed,
                 level={0}
                 currentPath={location.pathname}
                 onItemClick={handleItemClick}
-                isCollapsed={isCollapsed}
+                isCollapsed={shouldBeCollapsed()}
                 expandedItems={expandedItems}
                 setExpandedItems={setExpandedItems}
+                screenSize={screenSize}
+                shouldBeCollapsed={shouldBeCollapsed}
               />
             ))}
           </div>
         </nav>
 
-        {/* Resto del sidebar (información del usuario, estadísticas, etc.) */}
-        {!isCollapsed && (
+        {/* Información adicional (solo visible cuando no está colapsado) */}
+        {!shouldBeCollapsed() && (
           <>
             {/* Información del Usuario */}
             <div className="px-4 py-3 border-t border-gray-200 flex-shrink-0">
               <div className="bg-gradient-to-br from-primary-50 to-primary-100 rounded-lg p-3 border border-primary-200">
                 <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-primary-900 rounded-full flex items-center justify-center">
-                    <span className="text-white text-xs font-medium">AS</span>
+                  <div className={`
+                    bg-primary-900 rounded-full flex items-center justify-center
+                    ${screenSize.isMobile ? 'w-10 h-10' : 'w-8 h-8'}
+                  `}>
+                    <span className={`
+                      text-white font-medium
+                      ${screenSize.isMobile ? 'text-sm' : 'text-xs'}
+                    `}>
+                      AS
+                    </span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-primary-900 truncate">Admin Sistema</p>
-                    <p className="text-xs text-primary-700">Administrador</p>
+                    <p className={`
+                      font-medium text-primary-900 truncate
+                      ${screenSize.isMobile ? 'text-base' : 'text-sm'}
+                    `}>
+                      Admin Sistema
+                    </p>
+                    <p className={`
+                      text-primary-700
+                      ${screenSize.isMobile ? 'text-sm' : 'text-xs'}
+                    `}>
+                      Administrador
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Estadísticas Rápidas */}
-            <div className="px-4 py-3 border-t border-gray-100 flex-shrink-0">
-              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Estadísticas Rápidas</h4>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-gray-600">EPS Activas</span>
-                  <span className="font-medium text-primary-900">24</span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-gray-600">IPS Registradas</span>
-                  <span className="font-medium text-primary-900">156</span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-gray-600">Última Carga</span>
-                  <span className="font-medium text-success-600">Hace 2h</span>
+            {/* Estadísticas Rápidas (solo en desktop y tablet expandido) */}
+            {!screenSize.isMobile && (
+              <div className="px-4 py-3 border-t border-gray-100 flex-shrink-0">
+                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                  Estadísticas Rápidas
+                </h4>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-gray-600">EPS Activas</span>
+                    <span className="font-medium text-primary-900">24</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-gray-600">IPS Registradas</span>
+                    <span className="font-medium text-primary-900">156</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-gray-600">Última Carga</span>
+                    <span className="font-medium text-success-600">Hace 2h</span>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Footer del Sidebar */}
             <div className="px-4 py-3 border-t border-gray-200 flex-shrink-0">
@@ -479,48 +664,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, isCollapsed,
                   <div className="w-2 h-2 bg-success-500 rounded-full animate-pulse"></div>
                   <span className="text-success-800 font-medium">Sistema Online</span>
                 </div>
-                <div className="mt-2 space-y-1 text-xs text-success-700">
+                <div className={`mt-2 space-y-1 text-xs text-success-700 ${screenSize.isMobile ? 'text-sm' : ''}`}>
                   <div className="flex items-center justify-between">
                     <span>Base de Datos</span>
                     <span className="font-medium">✓ OK</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span>Última Sync</span>
-                    <span className="font-medium">{new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span className="font-medium">
+                      {new Date().toLocaleTimeString('es-CO', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })}
+                    </span>
                   </div>
                 </div>
-              </div>
-            </div>
-
-            {/* Accesos Rápidos */}
-            <div className="px-4 py-3 border-t border-gray-100 flex-shrink-0">
-              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Accesos Rápidos</h4>
-              <div className="grid grid-cols-2 gap-2">
-                <button 
-                  onClick={() => navigate('/carga/cartera')}
-                  className="flex flex-col items-center p-2 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <DocumentArrowUpIcon className="w-4 h-4 text-primary-600 mb-1" />
-                  <span className="text-xs text-gray-600">Cargar</span>
-                </button>
-                <button 
-                  onClick={() => navigate('/gestion/eps')}
-                  className="flex flex-col items-center p-2 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <WrenchScrewdriverIcon className="w-4 h-4 text-primary-600 mb-1" />
-                  <span className="text-xs text-gray-600">Gestión</span>
-                </button>
-                <button 
-                  onClick={() => navigate('/config/parametros')}
-                  className="flex flex-col items-center p-2 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <CogIcon className="w-4 h-4 text-primary-600 mb-1" />
-                  <span className="text-xs text-gray-600">Config</span>
-                </button>
-                <button className="flex flex-col items-center p-2 rounded-lg hover:bg-gray-50 transition-colors">
-                  <ServerIcon className="w-4 h-4 text-primary-600 mb-1" />
-                  <span className="text-xs text-gray-600">Sistema</span>
-                </button>
               </div>
             </div>
           </>

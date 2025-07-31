@@ -1,0 +1,298 @@
+/* frontend/src/styles/responsive.css */
+
+/* Scrollbar personalizado */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(209 213 219) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: rgb(209 213 219);
+  border-radius: 3px;
+  border: none;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(156 163 175);
+}
+
+/* Scrollbar para elementos del sidebar */
+.scrollbar-sidebar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+.scrollbar-sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollbar-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-sidebar::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+}
+
+.scrollbar-sidebar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Animaciones personalizadas */
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutLeft {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Clases de utilidad para animaciones */
+.animate-slide-in-left {
+  animation: slideInLeft 0.3s ease-out;
+}
+
+.animate-slide-out-left {
+  animation: slideOutLeft 0.3s ease-out;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.animate-fade-out {
+  animation: fadeOut 0.2s ease-out;
+}
+
+/* Mejoras para touch devices */
+@media (hover: none) and (pointer: coarse) {
+  /* Aumentar área de toque en mobile */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Remover efectos hover en dispositivos touch */
+  .hover\:bg-gray-100:hover {
+    background-color: initial;
+  }
+  
+  .hover\:bg-primary-800:hover {
+    background-color: initial;
+  }
+  
+  /* Agregar estados active para mejor feedback táctil */
+  .touch-feedback:active {
+    background-color: rgba(0, 0, 0, 0.1);
+    transform: scale(0.98);
+  }
+}
+
+/* Estilos específicos para diferentes tamaños de pantalla */
+
+/* Mobile First - Hasta 767px */
+@media (max-width: 767px) {
+  .sidebar-mobile {
+    width: 320px;
+    max-width: 85vw;
+  }
+  
+  .header-mobile {
+    padding-left: 1rem;
+    padding-right: 1rem;
+    height: 64px;
+  }
+  
+  .content-mobile {
+    padding: 1rem;
+    min-height: calc(100vh - 64px);
+  }
+  
+  /* Mejorar legibilidad en mobile */
+  .text-mobile {
+    font-size: 16px;
+    line-height: 1.5;
+  }
+  
+  /* Espaciado optimizado para touch */
+  .menu-item-mobile {
+    min-height: 48px;
+    padding: 12px 16px;
+    margin-bottom: 4px;
+  }
+}
+
+/* Tablet - 768px a 1023px */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .sidebar-tablet {
+    width: 288px;
+  }
+  
+  .sidebar-tablet.collapsed {
+    width: 64px;
+  }
+  
+  .header-tablet {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+    height: 60px;
+  }
+  
+  .content-tablet {
+    padding: 1.25rem;
+    min-height: calc(100vh - 60px);
+  }
+}
+
+/* Desktop - 1024px en adelante */
+@media (min-width: 1024px) {
+  .sidebar-desktop {
+    width: 320px;
+    position: static;
+    transform: translateX(0);
+  }
+  
+  .sidebar-desktop.collapsed {
+    width: 64px;
+  }
+  
+  .header-desktop {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+    height: 64px;
+  }
+  
+  .content-desktop {
+    padding: 1.5rem;
+    min-height: calc(100vh - 64px);
+  }
+}
+
+/* Large Desktop - 1280px en adelante */
+@media (min-width: 1280px) {
+  .content-large {
+    padding: 2rem;
+    max-width: none;
+  }
+}
+
+/* Estados especiales */
+.sidebar-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.content-transition {
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Overlay con mejor performance */
+.overlay {
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  transition: opacity 0.3s ease-in-out;
+}
+
+/* Focus states mejorados */
+.focus-visible:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Estados de carga */
+.loading-skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Mejoras de accesibilidad */
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-transition,
+  .content-transition,
+  .animate-slide-in-left,
+  .animate-slide-out-left,
+  .animate-fade-in,
+  .animate-fade-out {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* Dark mode support (preparado para futuras implementaciones) */
+@media (prefers-color-scheme: dark) {
+  .dark-mode {
+    /* Variables CSS para dark mode */
+    --bg-primary: #1f2937;
+    --bg-secondary: #374151;
+    --text-primary: #f9fafb;
+    --text-secondary: #d1d5db;
+    --border-color: #4b5563;
+  }
+}
+
+/* Print styles */
+@media print {
+  .sidebar,
+  .header,
+  .no-print {
+    display: none !important;
+  }
+  
+  .content {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+}
