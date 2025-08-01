@@ -75,6 +75,11 @@ export interface CarteraFilterParams {
   page?: number;
   limit?: number;
   soloConDatos?: boolean;
+  // ✅ NUEVAS PROPIEDADES AGREGADAS:
+  includeEPS?: boolean;
+  includeIPS?: boolean;
+  orderBy?: 'nombre' | 'codigo' | 'createdAt' | 'total';
+  orderDirection?: 'ASC' | 'DESC';
 }
 
 export interface CarteraResponse {

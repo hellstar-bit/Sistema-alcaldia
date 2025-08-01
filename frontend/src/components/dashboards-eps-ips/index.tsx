@@ -1,5 +1,5 @@
-// frontend/src/components/dashboards-eps-ips/index.tsx
-import React, { useState, useEffect } from 'react';
+// frontend/src/components/dashboards-eps-ips/index.tsx - VERSIÓN CORREGIDA
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Tab } from '@headlessui/react';
 import { 
   ChartBarIcon, 
@@ -19,7 +19,7 @@ interface DashboardFilters {
   periodoIds?: string[];
   fechaInicio?: string;
   fechaFin?: string;
-  tipoAnalisis: 'cartera' | 'flujo' | 'ambos'; // Corrected: Identifier expected.
+  tipoAnalisis: 'cartera' | 'flujo' | 'ambos';
 }
 
 export const DashboardsEpsIps: React.FC = () => {
@@ -30,6 +30,19 @@ export const DashboardsEpsIps: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [loading, setLoading] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+
+  // Control de componente montado y prevención de múltiples operaciones
+  const mountedRef = useRef(true);
+  const refreshingRef = useRef(false);
+
+  // Cleanup al desmontar
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      refreshingRef.current = false;
+    };
+  }, []);
 
   const tabs = [
     { 
@@ -46,31 +59,62 @@ export const DashboardsEpsIps: React.FC = () => {
     }
   ];
 
-  const handleRefreshData = async () => {
-    setLoading(true);
-    try {
-      await dashboardsEpsIpsAPI.refreshCache();
-      setLastUpdate(new Date());
-    } catch (error) {
-      console.error('Error refreshing data:', error);
-    } finally {
-      setLoading(false);
+  // Función memoizada para refrescar datos - CORREGIDA
+  const handleRefreshData = useCallback(async () => {
+    if (refreshingRef.current || !mountedRef.current) {
+      console.log('🔄 Dashboard EPS-IPS: Refresh ya en progreso o componente desmontado');
+      return;
     }
-  };
 
-  const handleFilterChange = (newFilters: Partial<DashboardFilters>) => {
+    refreshingRef.current = true;
+    setLoading(true);
+    
+    try {
+      console.log('🔄 Dashboard EPS-IPS: Iniciando recarga de caché...');
+      await dashboardsEpsIpsAPI.refreshCache();
+      
+      if (mountedRef.current) {
+        setLastUpdate(new Date());
+        console.log('✅ Dashboard EPS-IPS: Caché actualizado exitosamente');
+      }
+    } catch (error) {
+      console.error('❌ Dashboard EPS-IPS: Error refreshing data:', error);
+    } finally {
+      refreshingRef.current = false;
+      if (mountedRef.current) {
+        setLoading(false);
+      }
+    }
+  }, []); // Dependencias vacías para evitar recreaciones
+
+  // Función memoizada para cambiar filtros - CORREGIDA
+  const handleFilterChange = useCallback((newFilters: Partial<DashboardFilters>) => {
+    if (!mountedRef.current) return;
     setFilters(prev => ({ ...prev, ...newFilters }));
-  };
+  }, []);
+
+  // Función memoizada para cambiar tabs - CORREGIDA
+  const handleTabChange = useCallback((index: number) => {
+    if (!mountedRef.current) return;
+    setSelectedTab(index);
+  }, []);
+
+  // Función memoizada para toggle de filtros - CORREGIDA
+  const handleToggleFilters = useCallback(() => {
+    if (!mountedRef.current) return;
+    setShowFilters(prev => !prev);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header Moderno */}
       <div className="bg-gradient-to-r from-primary-600 via-primary-700 to-primary-800 text-white">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+        <div className="absolute inset-0 opacity-10 pointer-events-none">
+          <div className="absolute inset-0 pointer-events-none" style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+            pointerEvents: 'none'
           }} />
-        </div>
+</div>
         
         <div className="relative px-6 py-8">
           <div className="flex items-center justify-between">
@@ -98,11 +142,12 @@ export const DashboardsEpsIps: React.FC = () => {
               className="flex items-center space-x-4"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
             >
               <button
-                onClick={() => setShowFilters(!showFilters)}
+                onClick={handleToggleFilters}
                 className="btn-secondary flex items-center space-x-2"
+                disabled={loading}
               >
                 <AdjustmentsHorizontalIcon className="w-5 h-5" />
                 <span>Filtros</span>
@@ -114,24 +159,19 @@ export const DashboardsEpsIps: React.FC = () => {
                 className="btn-success flex items-center space-x-2"
               >
                 <ArrowPathIcon className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-                <span>Actualizar</span>
+                <span>{loading ? 'Actualizando...' : 'Actualizar'}</span>
               </button>
             </motion.div>
           </div>
 
-          {/* Información de última actualización */}
-          <motion.div 
-            className="mt-4 text-sm text-primary-200"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-          >
+          {/* Indicador de última actualización */}
+          <div className="mt-4 text-primary-200 text-sm">
             Última actualización: {lastUpdate.toLocaleString('es-CO')}
-          </motion.div>
+          </div>
         </div>
       </div>
 
-      {/* Panel de Filtros Desplegable */}
+      {/* Panel de Filtros - CORREGIDO: Un solo AnimatePresence */}
       <AnimatePresence>
         {showFilters && (
           <motion.div
@@ -143,61 +183,50 @@ export const DashboardsEpsIps: React.FC = () => {
           >
             <FilterPanel 
               filters={filters}
-              onFiltersChange={handleFilterChange}
-              onClose={() => setShowFilters(false)}
+              onChange={handleFilterChange}
+              onClose={handleToggleFilters}
             />
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Navegación por Tabs */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="px-6">
-          <Tab.Group selectedIndex={selectedTab} onChange={setSelectedTab}>
-            <Tab.List className="flex space-x-8">
-              {tabs.map((tab, index) => (
-                <Tab
-                  key={tab.id}
-                  className={({ selected }) =>
-                    `py-4 px-1 border-b-2 font-medium text-sm focus:outline-none transition-colors duration-200 ${
-                      selected
-                        ? 'border-primary-500 text-primary-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`
-                  }
-                >
-                  <div className="flex items-center space-x-2">
-                    <tab.icon className="w-5 h-5" />
-                    <span>{tab.name}</span>
-                  </div>
-                </Tab>
-              ))}
-            </Tab.List>
-          </Tab.Group>
-        </div>
-      </div>
+      {/* Contenido Principal con Tabs - SIMPLIFICADO SIN AnimatePresence PROBLEMÁTICO */}
+      <div className="px-6 py-8">
+        <Tab.Group selectedIndex={selectedTab} onChange={handleTabChange}>
+          <Tab.List className="flex space-x-1 rounded-xl bg-blue-900/20 p-1 mb-8">
+            {tabs.map((tab) => (
+              <Tab
+                key={tab.id}
+                className={({ selected }) =>
+                  `w-full rounded-lg py-2.5 text-sm font-medium leading-5 transition-all duration-200 focus:outline-none ${
+                    selected
+                      ? 'bg-white text-blue-700 shadow'
+                      : 'text-blue-600 hover:bg-white/[0.12] hover:text-blue-800'
+                  }`
+                }
+              >
+                <div className="flex items-center justify-center space-x-2">
+                  <tab.icon className="w-5 h-5" />
+                  <span>{tab.name}</span>
+                </div>
+              </Tab>
+            ))}
+          </Tab.List>
 
-      {/* Contenido Principal */}
-      <div className="p-6">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={selectedTab}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-          >
-            {(() => {
-  const SelectedComponent = tabs[selectedTab].component;
-  return (
-    <SelectedComponent 
-      filters={filters}
-      loading={loading}
-    />
-  );
-})()}
-          </motion.div>
-        </AnimatePresence>
+          <Tab.Panels>
+            {tabs.map((tab, idx) => (
+              <Tab.Panel
+                key={tab.id}
+                className={`${selectedTab === idx ? 'block' : 'hidden'}`}
+              >
+                {/* Contenido simple sin AnimatePresence anidado */}
+                <div>
+                  <tab.component filters={filters} loading={loading} />
+                </div>
+              </Tab.Panel>
+            ))}
+          </Tab.Panels>
+        </Tab.Group>
       </div>
     </div>
   );
