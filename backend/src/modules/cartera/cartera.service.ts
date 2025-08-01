@@ -837,29 +837,28 @@ export class CarteraService {
       });
 
       // Preparar datos para Excel
-      const excelData = [
-        [
-          'EPS', 'IPS', 'Período', 'A30', 'A60', 'A90', 'A120', 'A180', 'A360', 'SUP360', 'TOTAL', 'Observaciones'
-        ]
-      ];
+      const excelData: (string | number)[][] = [
+  [
+    'EPS', 'IPS', 'Período', 'A30', 'A60', 'A90', 'A120', 'A180', 'A360', 'SUP360', 'TOTAL', 'Observaciones'
+  ]
+];
 
-      data.forEach(item => {
-        excelData.push([
-          item.eps.nombre,
-          item.ips.nombre,
-          `${item.periodo.nombre} ${item.periodo.year}`,
-          item.a30,
-          item.a60,
-          item.a90,
-          item.a120,
-          item.a180,
-          item.a360,
-          item.sup360,
-          item.total,
-          item.observaciones || ''
-        ]);
-      });
-
+data.forEach(item => {
+  excelData.push([
+    item.eps.nombre,
+    item.ips.nombre,
+    `${item.periodo.nombre} ${item.periodo.year}`,
+    item.a30,      // ✅ Ahora acepta numbers
+    item.a60,
+    item.a90,
+    item.a120,
+    item.a180,
+    item.a360,
+    item.sup360,
+    item.total,
+    item.observaciones || ''
+  ]);
+});
       const workbook = XLSX.utils.book_new();
       const worksheet = XLSX.utils.aoa_to_sheet(excelData);
       
@@ -964,83 +963,154 @@ export class CarteraService {
       throw new BadRequestException(`Error al inicializar períodos: ${error.message}`);
     }
   }
-   async getCarteraData(filters: any): Promise<{
-    data: any[];
-    total: number;
-    totalCartera: number;
-  }> {
-    console.log('💰 CarteraService: getCarteraData - Obteniendo datos con filtros:', filters);
+   async getCarteraData(filters: CarteraFilterDto): Promise<{
+  data: CarteraData[];
+  total: number;
+  totalCartera: number;
+}> {
+  console.log('💰 CarteraService: getCarteraData con filtros:', filters);
 
-    try {
-      // Construir consulta base
-      const queryBuilder = this.carteraDataRepository
-        .createQueryBuilder('cartera')
-        .leftJoinAndSelect('cartera.eps', 'eps')
-        .leftJoinAndSelect('cartera.ips', 'ips')
-        .leftJoinAndSelect('cartera.periodo', 'periodo')
-        .where('cartera.activo = :activo', { activo: true });
+  try {
+    // Construir query base
+    const queryBuilder = this.carteraDataRepository.createQueryBuilder('cartera')
+      .where('cartera.activo = :activo', { activo: true });
 
-      // Aplicar filtros
-      if (filters.epsId) {
-        queryBuilder.andWhere('cartera.epsId = :epsId', { epsId: filters.epsId });
-      }
-
-      if (filters.ipsId) {
-        queryBuilder.andWhere('cartera.ipsId = :ipsId', { ipsId: filters.ipsId });
-      }
-
-      if (filters.periodoId) {
-        queryBuilder.andWhere('cartera.periodoId = :periodoId', { periodoId: filters.periodoId });
-      }
-
-      if (filters.search) {
-        queryBuilder.andWhere(
-          '(eps.nombre ILIKE :search OR ips.nombre ILIKE :search)',
-          { search: `%${filters.search}%` }
-        );
-      }
-
-      // Contar total de registros
-      const total = await queryBuilder.getCount();
-
-      // Calcular total de cartera
-      const totalResult = await this.carteraDataRepository
-        .createQueryBuilder('cartera')
-        .select('SUM(cartera.total)', 'totalCartera')
-        .where('cartera.activo = :activo', { activo: true })
-        .andWhere(filters.epsId ? 'cartera.epsId = :epsId' : '1=1', filters.epsId ? { epsId: filters.epsId } : {})
-        .andWhere(filters.periodoId ? 'cartera.periodoId = :periodoId' : '1=1', filters.periodoId ? { periodoId: filters.periodoId } : {})
-        .andWhere(filters.ipsId ? 'cartera.ipsId = :ipsId' : '1=1', filters.ipsId ? { ipsId: filters.ipsId } : {})
-        .getRawOne();
-
-      const totalCartera = parseFloat(totalResult.totalCartera) || 0;
-
-      // Aplicar paginación y ordenamiento
-      const page = filters.page || 1;
-      const limit = filters.limit || 10;
-      
-      queryBuilder
-        .orderBy('eps.nombre', 'ASC')
-        .addOrderBy('ips.nombre', 'ASC')
-        .addOrderBy('periodo.year', 'DESC')
-        .addOrderBy('periodo.mes', 'DESC')
-        .skip((page - 1) * limit)
-        .take(limit);
-
-      // Ejecutar consulta principal
-      const data = await queryBuilder.getMany();
-
-      console.log(`✅ CarteraService: Datos obtenidos - ${data.length} registros, Total: ${totalCartera.toLocaleString()}`);
-
-      return { 
-        data, 
-        total, 
-        totalCartera 
-      };
-
-    } catch (error) {
-      console.error('❌ CarteraService: Error en getCarteraData:', error);
-      throw new BadRequestException(`Error al obtener datos de cartera: ${error.message}`);
+    // ✅ INCLUIR RELACIONES CONDICIONALMENTE
+    if (filters.includeEPS || filters.includeEPS === undefined) {
+      queryBuilder.leftJoinAndSelect('cartera.eps', 'eps');
     }
+
+    if (filters.includeIPS || filters.includeIPS === undefined) {
+      queryBuilder.leftJoinAndSelect('cartera.ips', 'ips');
+    }
+
+    // Siempre incluir período
+    queryBuilder.leftJoinAndSelect('cartera.periodo', 'periodo');
+
+    // Aplicar filtros
+    if (filters.epsId) {
+      queryBuilder.andWhere('cartera.epsId = :epsId', { epsId: filters.epsId });
+    }
+
+    if (filters.periodoId) {
+      queryBuilder.andWhere('cartera.periodoId = :periodoId', { periodoId: filters.periodoId });
+    }
+
+    if (filters.ipsId) {
+      queryBuilder.andWhere('cartera.ipsId = :ipsId', { ipsId: filters.ipsId });
+    }
+
+    // ✅ MANEJAR FILTROS MÚLTIPLES (listas separadas por comas)
+    if (filters.epsIds && filters.epsIds.trim()) {
+      const epsIdArray = filters.epsIds.split(',').map(id => id.trim()).filter(Boolean);
+      if (epsIdArray.length > 0) {
+        queryBuilder.andWhere('cartera.epsId IN (:...epsIds)', { epsIds: epsIdArray });
+      }
+    }
+
+    if (filters.ipsIds && filters.ipsIds.trim()) {
+      const ipsIdArray = filters.ipsIds.split(',').map(id => id.trim()).filter(Boolean);
+      if (ipsIdArray.length > 0) {
+        queryBuilder.andWhere('cartera.ipsId IN (:...ipsIds)', { ipsIds: ipsIdArray });
+      }
+    }
+
+    if (filters.periodoIds && filters.periodoIds.trim()) {
+      const periodoIdArray = filters.periodoIds.split(',').map(id => id.trim()).filter(Boolean);
+      if (periodoIdArray.length > 0) {
+        queryBuilder.andWhere('cartera.periodoId IN (:...periodoIds)', { periodoIds: periodoIdArray });
+      }
+    }
+
+    // Filtro de búsqueda por texto
+    if (filters.search && filters.search.trim()) {
+      const searchTerm = `%${filters.search.trim()}%`;
+      queryBuilder.andWhere(
+        '(eps.nombre ILIKE :search OR ips.nombre ILIKE :search OR cartera.observaciones ILIKE :search)',
+        { search: searchTerm }
+      );
+    }
+
+    // Filtro para mostrar solo registros con datos
+    if (filters.soloConDatos) {
+      queryBuilder.andWhere('cartera.total > 0');
+    }
+
+    // Ordenamiento
+    const orderBy = filters.orderBy || 'createdAt';
+    const orderDirection = filters.orderDirection || 'DESC';
+
+    switch (orderBy) {
+      case 'nombre':
+        if (filters.includeIPS !== false) {
+          queryBuilder.orderBy('ips.nombre', orderDirection as 'ASC' | 'DESC');
+        } else if (filters.includeEPS !== false) {
+          queryBuilder.orderBy('eps.nombre', orderDirection as 'ASC' | 'DESC');
+        }
+        break;
+      case 'codigo':
+        if (filters.includeIPS !== false) {
+          queryBuilder.orderBy('ips.codigo', orderDirection as 'ASC' | 'DESC');
+        } else if (filters.includeEPS !== false) {
+          queryBuilder.orderBy('eps.codigo', orderDirection as 'ASC' | 'DESC');
+        }
+        break;
+      case 'total':
+        queryBuilder.orderBy('cartera.total', orderDirection as 'ASC' | 'DESC');
+        break;
+      default:
+        queryBuilder.orderBy('cartera.createdAt', orderDirection as 'ASC' | 'DESC');
+    }
+
+    // Paginación
+    const page = filters.page || 1;
+    const limit = Math.min(filters.limit || 10, 50000); // Límite máximo de 50,000
+    const skip = (page - 1) * limit;
+
+    queryBuilder.skip(skip).take(limit);
+
+    // Ejecutar consultas
+    const [data, total] = await queryBuilder.getManyAndCount();
+
+    // Calcular suma total de cartera
+    const sumQueryBuilder = this.carteraDataRepository.createQueryBuilder('cartera')
+      .select('SUM(cartera.total)', 'totalCartera')
+      .where('cartera.activo = :activo', { activo: true });
+
+    // Aplicar los mismos filtros para el cálculo del total
+    if (filters.epsId) {
+      sumQueryBuilder.andWhere('cartera.epsId = :epsId', { epsId: filters.epsId });
+    }
+    if (filters.periodoId) {
+      sumQueryBuilder.andWhere('cartera.periodoId = :periodoId', { periodoId: filters.periodoId });
+    }
+    if (filters.ipsId) {
+      sumQueryBuilder.andWhere('cartera.ipsId = :ipsId', { ipsId: filters.ipsId });
+    }
+    if (filters.soloConDatos) {
+      sumQueryBuilder.andWhere('cartera.total > 0');
+    }
+
+    const sumResult = await sumQueryBuilder.getRawOne();
+    const totalCartera = parseFloat(sumResult?.totalCartera || '0');
+
+    console.log('✅ CarteraService: Datos obtenidos', {
+      registros: data.length,
+      total: total,
+      totalCartera: totalCartera,
+      page,
+      limit
+    });
+
+    return {
+      data,
+      total,
+      totalCartera
+    };
+
+  } catch (error) {
+    console.error('❌ CarteraService: Error al obtener datos de cartera:', error);
+    throw error;
   }
+}
 }
