@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import {
   CurrencyDollarIcon,
   UsersIcon,
-  ArrowTrendingUpIcon,
+  ArrowArrowTrendingUpIcon,
   ExclamationTriangleIcon,
   DocumentArrowUpIcon,
   BanknotesIcon,

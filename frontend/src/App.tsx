@@ -1,4 +1,4 @@
-// frontend/src/App.tsx - VERSIÓN COMPLETA CON MÓDULO DE ADRES INTEGRADO
+// frontend/src/App.tsx - ACTUALIZACIÓN PARA INCLUIR DASHBOARDS EPS E IPS
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
@@ -7,9 +7,10 @@ import { Layout } from './components/layout';
 import { Dashboard } from './components/dashboard/Dashboard';
 import InformacionCartera from './components/cartera/InformacionCartera';
 import { InformacionFlujo } from './components/flujo/InformacionFlujo';
-import { InformacionAdres } from './components/adres/InformacionAdres'; // ✅ COMPONENTE ADRES INTEGRADO
+import { InformacionAdres } from './components/adres/InformacionAdres';
 import GestionEPS from './components/gestion/GestionEPS';
 import GestionIPS from './components/gestion/GestionIPS';
+import { DashboardsEpsIps } from './components/dashboards-eps-ips'; // ✅ NUEVO COMPONENTE
 import './App.css';
 
 function App() {
@@ -26,103 +27,48 @@ function App() {
               {/* Módulo de Carga de Información */}
               <Route path="/carga/cartera" element={<InformacionCartera />} />
               <Route path="/carga/flujo" element={<InformacionFlujo />} />
-              <Route path="/carga/adres" element={<InformacionAdres />} /> {/* ✅ RUTA ADRES ACTIVA */}
+              <Route path="/carga/adres" element={<InformacionAdres />} />
               
-              {/* Módulo de Dashboards EPS */}
-              <Route path="/dashboards/cartera/periodo" element={
-                <div className="p-6">
-                  <h1 className="text-2xl font-bold text-primary-900">Dashboard por Período</h1>
-                  <p className="text-gray-600 mt-2">Módulo en desarrollo...</p>
-                </div>
-              } />
-              <Route path="/dashboards/cartera/eps-ips" element={
-                <div className="p-6">
-                  <h1 className="text-2xl font-bold text-primary-900">Dashboard EPS e IPS</h1>
-                  <p className="text-gray-600 mt-2">Módulo en desarrollo...</p>
-                </div>
-              } />
-              <Route path="/dashboards/cartera/ips" element={
-                <div className="p-6">
-                  <h1 className="text-2xl font-bold text-primary-900">Dashboard IPS</h1>
-                  <p className="text-gray-600 mt-2">Módulo en desarrollo...</p>
-                </div>
-              } />
-              <Route path="/dashboards/cartera/total" element={
-                <div className="p-6">
-                  <h1 className="text-2xl font-bold text-primary-900">Dashboard Total</h1>
-                  <p className="text-gray-600 mt-2">Módulo en desarrollo...</p>
-                </div>
-              } />
-              <Route path="/dashboards/flujo" element={
-                <div className="p-6">
-                  <h1 className="text-2xl font-bold text-primary-900">Dashboard Flujo</h1>
-                  <p className="text-gray-600 mt-2">Módulo en desarrollo...</p>
-                </div>
-              } />
+              {/* ✅ NUEVO MÓDULO: Dashboards EPS e IPS */}
+              <Route path="/dashboards/eps-ips" element={<DashboardsEpsIps />} />
+              <Route path="/dashboards/eps-ips/*" element={<DashboardsEpsIps />} />
+              
+              {/* Módulos Antiguos de Dashboards (ahora redirigen al nuevo) */}
+              <Route path="/dashboards/cartera/periodo" element={<Navigate to="/dashboards/eps-ips" replace />} />
+              <Route path="/dashboards/cartera/eps-ips" element={<Navigate to="/dashboards/eps-ips" replace />} />
+              <Route path="/dashboards/cartera/ips" element={<Navigate to="/dashboards/eps-ips" replace />} />
+              <Route path="/dashboards/cartera/total" element={<Navigate to="/dashboards/eps-ips" replace />} />
+              <Route path="/dashboards/flujo" element={<Navigate to="/dashboards/eps-ips" replace />} />
+              
+              {/* Módulo de Gestión */}
+              <Route path="/gestion/eps" element={<GestionEPS />} />
+              <Route path="/gestion/ips" element={<GestionIPS />} />
               
               {/* Módulo de Información Base */}
               <Route path="/base/cartera" element={
                 <div className="p-6">
-                  <h1 className="text-2xl font-bold text-primary-900">Base Cartera</h1>
-                  <p className="text-gray-600 mt-2">Módulo en desarrollo...</p>
+                  <h1 className="text-2xl font-bold text-primary-900">Información Base - Cartera</h1>
+                  <p className="text-gray-600 mt-2">Consulta de datos maestros de cartera...</p>
                 </div>
               } />
-              <Route path="/base/adres" element={<InformacionAdres />} /> {/* ✅ COMPONENTE ADRES TAMBIÉN AQUÍ */}
+              <Route path="/base/adres" element={
+                <div className="p-6">
+                  <h1 className="text-2xl font-bold text-primary-900">Información Base - ADRES</h1>
+                  <p className="text-gray-600 mt-2">Consulta de datos maestros de ADRES...</p>
+                </div>
+              } />
               <Route path="/base/flujo" element={
                 <div className="p-6">
-                  <h1 className="text-2xl font-bold text-primary-900">Base Flujo</h1>
-                  <p className="text-gray-600 mt-2">Módulo en desarrollo...</p>
-                </div>
-              } />
-              
-              {/* Módulo de Reportes */}
-              <Route path="/reportes/mensuales" element={
-                <div className="p-6">
-                  <h1 className="text-2xl font-bold text-primary-900">Reportes Mensuales</h1>
-                  <p className="text-gray-600 mt-2">Módulo en desarrollo...</p>
-                </div>
-              } />
-              <Route path="/reportes/tendencias" element={
-                <div className="p-6">
-                  <h1 className="text-2xl font-bold text-primary-900">Análisis de Tendencias</h1>
-                  <p className="text-gray-600 mt-2">Módulo en desarrollo...</p>
-                </div>
-              } />
-              
-              {/* Módulo de Gestión EPS/IPS */}
-              <Route path="/gestion/eps" element={<GestionEPS />} />
-              <Route path="/gestion/ips" element={<GestionIPS />} />
-              
-              {/* Módulo de Configuración */}
-              <Route path="/config/usuarios" element={
-                <div className="p-6">
-                  <h1 className="text-2xl font-bold text-primary-900">Gestión de Usuarios</h1>
-                  <p className="text-gray-600 mt-2">Módulo en desarrollo...</p>
-                </div>
-              } />
-              <Route path="/config/parametros" element={
-                <div className="p-6">
-                  <h1 className="text-2xl font-bold text-primary-900">Parámetros del Sistema</h1>
-                  <p className="text-gray-600 mt-2">Módulo en desarrollo...</p>
+                  <h1 className="text-2xl font-bold text-primary-900">Información Base - Flujo</h1>
+                  <p className="text-gray-600 mt-2">Consulta de datos maestros de flujo...</p>
                 </div>
               } />
               
               {/* Ruta 404 */}
               <Route path="*" element={
-                <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="w-24 h-24 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                      <span className="text-4xl">🚧</span>
-                    </div>
-                    <h1 className="text-3xl font-bold text-primary-900 mb-2">Página no encontrada</h1>
-                    <p className="text-gray-600 mb-6">La página que buscas no existe o está en desarrollo.</p>
-                    <button 
-                      onClick={() => window.location.href = '/dashboard'}
-                      className="btn-primary"
-                    >
-                      Volver al Dashboard
-                    </button>
-                  </div>
+                <div className="p-6 text-center">
+                  <h1 className="text-2xl font-bold text-gray-900 mb-4">Página no encontrada</h1>
+                  <p className="text-gray-600">La página que buscas no existe.</p>
                 </div>
               } />
             </Routes>
