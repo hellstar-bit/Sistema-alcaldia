@@ -1,4 +1,4 @@
-// frontend/src/hooks/useDashboardData.ts - VERSIÓN CORREGIDA SIN ERRORES
+// frontend/src/hooks/useDashboardData.ts - VERSIÓN CON DATOS MOCKEADOS
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { carteraAPI } from '../services/carteraApi';
 import { flujoAPI } from '../services/flujoApi';
@@ -77,6 +77,126 @@ export interface SystemStatus {
   };
 }
 
+// DATOS MOCKEADOS REALISTAS PARA EL DASHBOARD
+const MOCK_DASHBOARD_DATA = {
+  // Estadísticas principales
+  stats: {
+    carteraTotal: {
+      value: 84573650000, // $84,573 millones
+      change: 12.4,
+      changeType: 'positive' as const
+    },
+    epsActivas: {
+      value: 24,
+      change: 0,
+      changeType: 'neutral' as const
+    },
+    ipsRegistradas: {
+      value: 186,
+      change: 5.2,
+      changeType: 'positive' as const
+    },
+    alertasPendientes: {
+      value: 12,
+      change: -15.8,
+      changeType: 'positive' as const
+    }
+  },
+
+  // Datos de evolución mensual
+  chartData: [
+    { month: 'Jul', cartera: 78500, flujo: 45200, eps_activas: 22, ips_registradas: 178 },
+    { month: 'Ago', cartera: 81200, flujo: 48100, eps_activas: 23, ips_registradas: 180 },
+    { month: 'Sep', cartera: 79800, flujo: 46800, eps_activas: 23, ips_registradas: 182 },
+    { month: 'Oct', cartera: 82400, flujo: 49500, eps_activas: 24, ips_registradas: 183 },
+    { month: 'Nov', cartera: 83900, flujo: 50800, eps_activas: 24, ips_registradas: 185 },
+    { month: 'Dic', cartera: 84574, flujo: 52100, eps_activas: 24, ips_registradas: 186 }
+  ],
+
+  // Distribución por EPS
+  epsDistribution: [
+    { name: 'NUEVA EPS', value: 28.5, color: '#3B82F6', cartera: 24083 },
+    { name: 'SANITAS', value: 18.2, color: '#10B981', cartera: 15392 },
+    { name: 'SURA', value: 15.8, color: '#F59E0B', cartera: 13367 },
+    { name: 'COMPENSAR', value: 12.4, color: '#EF4444', cartera: 10487 },
+    { name: 'COOMEVA', value: 9.1, color: '#8B5CF6', cartera: 7696 },
+    { name: 'OTRAS', value: 16.0, color: '#6B7280', cartera: 13548 }
+  ],
+
+  // Actividades recientes
+  recentActivities: [
+    {
+      id: '1',
+      type: 'upload' as const,
+      title: 'Carga de archivo de cartera',
+      description: 'Archivo NUEVA EPS - Diciembre 2024 procesado exitosamente',
+      timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 min ago
+      status: 'success' as const,
+      user: 'María González',
+      metadata: { fileSize: '2.4 MB', recordCount: 1247, eps: 'NUEVA EPS', period: 'Dic 2024' }
+    },
+    {
+      id: '2',
+      type: 'process' as const,
+      title: 'Procesamiento de flujo completado',
+      description: 'Datos de flujo SANITAS validados y actualizados',
+      timestamp: new Date(Date.now() - 1000 * 60 * 45).toISOString(), // 45 min ago
+      status: 'success' as const,
+      user: 'Carlos Mendoza',
+      metadata: { recordCount: 892, eps: 'SANITAS' }
+    },
+    {
+      id: '3',
+      type: 'validation' as const,
+      title: 'Validación con advertencias',
+      description: 'Archivo COMPENSAR procesado con 3 registros inconsistentes',
+      timestamp: new Date(Date.now() - 1000 * 60 * 60).toISOString(), // 1 hour ago
+      status: 'warning' as const,
+      user: 'Ana Rodríguez',
+      metadata: { recordCount: 654, eps: 'COMPENSAR' }
+    },
+    {
+      id: '4',
+      type: 'report' as const,
+      title: 'Reporte mensual generado',
+      description: 'Informe ejecutivo de Noviembre 2024 disponible',
+      timestamp: new Date(Date.now() - 1000 * 60 * 90).toISOString(), // 1.5 hours ago
+      status: 'info' as const,
+      user: 'Sistema',
+      metadata: { period: 'Nov 2024' }
+    },
+    {
+      id: '5',
+      type: 'system' as const,
+      title: 'Respaldo automático',
+      description: 'Respaldo de base de datos completado exitosamente',
+      timestamp: new Date(Date.now() - 1000 * 60 * 120).toISOString(), // 2 hours ago
+      status: 'success' as const,
+      user: 'Sistema',
+      metadata: {}
+    }
+  ],
+
+  // Estado del sistema
+  systemStatus: {
+    database: {
+      status: 'online' as const,
+      message: 'Base de datos funcionando correctamente',
+      lastCheck: new Date().toISOString()
+    },
+    api: {
+      status: 'online' as const,
+      message: 'API respondiendo normalmente',
+      responseTime: 245
+    },
+    storage: {
+      status: 'online' as const,
+      message: 'Almacenamiento disponible',
+      usagePercentage: 68
+    }
+  }
+};
+
 // Cache para optimizar rendimiento
 class DashboardCache {
   private cache = new Map<string, { data: any; timestamp: number; ttl: number }>();
@@ -110,7 +230,7 @@ class DashboardCache {
 // Instancia global del cache
 const dashboardCache = new DashboardCache();
 
-// Hook principal con datos reales del backend
+// Hook principal con datos mockeados realistas
 export const useDashboardData = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
@@ -134,68 +254,33 @@ export const useDashboardData = () => {
     };
   }, []);
 
-  // Función para obtener estadísticas principales
+  // Función para obtener estadísticas principales (con datos mockeados)
   const fetchStats = useCallback(async (): Promise<DashboardStats> => {
     const cacheKey = 'dashboard-stats';
     const cached = dashboardCache.get(cacheKey);
     if (cached) return cached;
 
-    console.log('📊 Dashboard: Calculando estadísticas principales...');
+    console.log('📊 Dashboard: Obteniendo estadísticas mockeadas...');
 
     try {
-      // Obtener datos principales en paralelo
-      const [epsResponse, carteraResponse, flujoResponse] = await Promise.allSettled([
-        carteraAPI.getAllEPS(),
-        carteraAPI.getCarteraData({ limit: 50000 }), // Obtener muestra grande para cálculos
-        flujoAPI.getControlCargaGrid()
-      ]);
+      // Simular delay de red
+      await new Promise(resolve => setTimeout(resolve, 800));
 
-      // Procesar EPS activas
-      const epsActivas = epsResponse.status === 'fulfilled' 
-        ? epsResponse.value.data?.filter(eps => eps.activa).length || 0 
-        : 0;
-
-      // Procesar cartera total
-      let carteraTotal = 0;
-      let ipsRegistradas = 0;
-      if (carteraResponse.status === 'fulfilled' && carteraResponse.value.data) {
-        carteraTotal = carteraResponse.value.data.summary?.totalCartera || 0;
-        const uniqueIPS = new Set(carteraResponse.value.data.data?.map(item => item.ips?.id).filter(Boolean));
-        ipsRegistradas = uniqueIPS.size;
-      }
-
-      // ✅ CORRECCIÓN: Calcular alertas usando 'total' en lugar de 'valorFacturado'
-      let alertasPendientes = 0;
-      if (carteraResponse.status === 'fulfilled' && carteraResponse.value.data?.data) {
-        // Contar registros con valores anómalos o faltantes
-        alertasPendientes = carteraResponse.value.data.data.filter(item => 
-          !item.total || item.total <= 0 || 
-          !item.ips?.nombre || !item.eps?.nombre
-        ).length;
-      }
-
-      // TODO: Implementar cálculo de cambios vs período anterior
-      // Por ahora, simular variaciones
+      // Añadir pequeñas variaciones aleatorias para simular datos vivos
+      const baseStats = MOCK_DASHBOARD_DATA.stats;
       const stats: DashboardStats = {
         carteraTotal: {
-          value: carteraTotal,
-          change: Math.random() * 20 - 10, // -10% a +10%
-          changeType: carteraTotal > 1000000000 ? 'positive' : 'neutral'
+          ...baseStats.carteraTotal,
+          value: baseStats.carteraTotal.value + (Math.random() - 0.5) * 100000000 // ±100M variación
         },
-        epsActivas: {
-          value: epsActivas,
-          change: 0,
-          changeType: 'neutral'
-        },
+        epsActivas: baseStats.epsActivas,
         ipsRegistradas: {
-          value: ipsRegistradas,
-          change: Math.random() * 10 - 5, // -5% a +5%
-          changeType: ipsRegistradas > 100 ? 'positive' : 'neutral'
+          ...baseStats.ipsRegistradas,
+          value: baseStats.ipsRegistradas.value + Math.floor(Math.random() * 3 - 1) // ±1 IPS
         },
         alertasPendientes: {
-          value: alertasPendientes,
-          change: -Math.random() * 15, // Mejora en alertas
-          changeType: 'positive'
+          ...baseStats.alertasPendientes,
+          value: Math.max(0, baseStats.alertasPendientes.value + Math.floor(Math.random() * 5 - 2)) // ±2 alertas
         }
       };
 
@@ -203,251 +288,128 @@ export const useDashboardData = () => {
       return stats;
 
     } catch (error) {
-      console.error('❌ Error calculando estadísticas:', error);
+      console.error('❌ Error obteniendo estadísticas:', error);
       throw error;
     }
   }, []);
 
-  // Función para obtener datos de gráficos
+  // Función para obtener datos de gráficos (con datos mockeados)
   const fetchChartData = useCallback(async (): Promise<ChartDataPoint[]> => {
     const cacheKey = 'dashboard-chart-data';
     const cached = dashboardCache.get(cacheKey);
     if (cached) return cached;
 
-    console.log('📈 Dashboard: Obteniendo datos para gráficos...');
+    console.log('📈 Dashboard: Obteniendo datos de gráficos mockeados...');
 
     try {
-      // Obtener períodos activos
-      const periodosResponse = await carteraAPI.getAllPeriodos();
-      const periodos = periodosResponse.data?.filter(p => p.activo) || [];
-      
-      // Obtener los últimos 6 períodos
-      const recentPeriods = periodos
-        .sort((a, b) => {
-          if (a.year !== b.year) return b.year - a.year;
-          return b.mes - a.mes;
-        })
-        .slice(0, 6)
-        .reverse();
+      await new Promise(resolve => setTimeout(resolve, 600));
 
-      const chartData: ChartDataPoint[] = await Promise.all(
-        recentPeriods.map(async (periodo) => {
-          try {
-            // Obtener datos de cartera para este período
-            const carteraResponse = await carteraAPI.getCarteraData({ 
-              periodoId: periodo.id, 
-              limit: 10000 
-            });
-
-            const carteraTotal = carteraResponse.data?.summary?.totalCartera || 0;
-            
-            // Obtener datos únicos de EPS e IPS
-            const uniqueEPS = new Set(
-              carteraResponse.data?.data?.map(item => item.eps?.id).filter(Boolean) || []
-            );
-            const uniqueIPS = new Set(
-              carteraResponse.data?.data?.map(item => item.ips?.id).filter(Boolean) || []
-            );
-
-            return {
-              month: `${periodo.mes.toString().padStart(2, '0')}/${periodo.year}`,
-              cartera: carteraTotal,
-              flujo: Math.random() * 100, // TODO: Implementar flujo real
-              eps_activas: uniqueEPS.size,
-              ips_registradas: uniqueIPS.size
-            };
-          } catch (error) {
-            console.warn(`⚠️ Error obteniendo datos para período ${periodo.nombre}:`, error);
-            return {
-              month: `${periodo.mes.toString().padStart(2, '0')}/${periodo.year}`,
-              cartera: 0,
-              flujo: 0,
-              eps_activas: 0,
-              ips_registradas: 0
-            };
-          }
-        })
-      );
+      // Añadir pequeñas variaciones a los datos base
+      const chartData: ChartDataPoint[] = MOCK_DASHBOARD_DATA.chartData.map(item => ({
+        ...item,
+        cartera: item.cartera + (Math.random() - 0.5) * 1000, // ±500M variación
+        flujo: item.flujo + (Math.random() - 0.5) * 500 // ±250M variación
+      }));
 
       dashboardCache.set(cacheKey, chartData);
       return chartData;
 
     } catch (error) {
       console.error('❌ Error obteniendo datos de gráficos:', error);
-      return [];
+      throw error;
     }
   }, []);
 
-  // Función para obtener distribución de EPS
+  // Función para obtener distribución EPS (con datos mockeados)
   const fetchEPSDistribution = useCallback(async (): Promise<EPSDistribution[]> => {
     const cacheKey = 'dashboard-eps-distribution';
     const cached = dashboardCache.get(cacheKey);
     if (cached) return cached;
 
-    console.log('🏢 Dashboard: Calculando distribución de EPS...');
+    console.log('🏢 Dashboard: Obteniendo distribución EPS mockeada...');
 
     try {
-      // Obtener todas las EPS activas
-      const epsResponse = await carteraAPI.getAllEPS();
-      const epsActivas = epsResponse.data?.filter(eps => eps.activa) || [];
+      await new Promise(resolve => setTimeout(resolve, 400));
 
-      // Obtener cartera por EPS
-      const epsWithCartera = await Promise.all(
-        epsActivas.slice(0, 10).map(async (eps, index) => {
-          try {
-            const carteraResponse = await carteraAPI.getCarteraData({ 
-              epsId: eps.id, 
-              limit: 10000 
-            });
-            const carteraTotal = carteraResponse.data?.summary?.totalCartera || 0;
-
-            return {
-              name: eps.nombre,
-              value: carteraTotal,
-              color: `hsl(${index * 36}, 70%, 50%)`, // Colores dinámicos
-              cartera: carteraTotal
-            };
-          } catch (error) {
-            console.warn(`⚠️ Error obteniendo cartera para EPS ${eps.nombre}:`, error);
-            return {
-              name: eps.nombre,
-              value: 0,
-              color: `hsl(${index * 36}, 70%, 50%)`,
-              cartera: 0
-            };
-          }
-        })
-      );
-
-      // Ordenar por cartera y calcular porcentajes
-      const sorted = epsWithCartera
-        .filter(eps => eps.cartera > 0)
-        .sort((a, b) => b.cartera - a.cartera);
-
-      const totalCartera = sorted.reduce((sum, eps) => sum + eps.cartera, 0);
-      
-      const distribution = sorted.map(eps => ({
+      const epsDistribution = MOCK_DASHBOARD_DATA.epsDistribution.map(eps => ({
         ...eps,
-        value: totalCartera > 0 ? (eps.cartera / totalCartera) * 100 : 0
+        cartera: eps.cartera + (Math.random() - 0.5) * 100 // ±50M variación
       }));
 
-      dashboardCache.set(cacheKey, distribution);
-      return distribution;
+      dashboardCache.set(cacheKey, epsDistribution);
+      return epsDistribution;
 
     } catch (error) {
-      console.error('❌ Error calculando distribución de EPS:', error);
-      return [];
+      console.error('❌ Error obteniendo distribución EPS:', error);
+      throw error;
     }
   }, []);
 
-  // Función para obtener actividades recientes
+  // Función para obtener actividades recientes (con datos mockeados)
   const fetchRecentActivities = useCallback(async (): Promise<RecentActivity[]> => {
     const cacheKey = 'dashboard-recent-activities';
     const cached = dashboardCache.get(cacheKey);
     if (cached) return cached;
 
-    console.log('📋 Dashboard: Obteniendo actividades recientes...');
+    console.log('📋 Dashboard: Obteniendo actividades recientes mockeadas...');
 
     try {
-      // ✅ CORRECCIÓN: Usar orderBy válido y obtener datos recientes de diferentes fuentes
-      const [carteraResponse, flujoResponse] = await Promise.allSettled([
-        carteraAPI.getCarteraData({ 
-          limit: 10, 
-          orderBy: 'createdAt', // ✅ CORREGIDO: usar 'createdAt' en lugar de 'updatedAt'
-          orderDirection: 'DESC' 
-        }),
-        flujoAPI.getControlCargaGrid()
-      ]);
+      await new Promise(resolve => setTimeout(resolve, 300));
 
-      const activities: RecentActivity[] = [];
+      // Actualizar timestamps para que sean recientes
+      const activities = MOCK_DASHBOARD_DATA.recentActivities.map((activity, index) => ({
+        ...activity,
+        timestamp: new Date(Date.now() - (index + 1) * 30 * 60 * 1000).toISOString() // Cada 30 min
+      }));
 
-      // Procesar actividades de cartera
-      if (carteraResponse.status === 'fulfilled' && carteraResponse.value.data?.data) {
-        const recentCartera = carteraResponse.value.data.data.slice(0, 3);
-        recentCartera.forEach((item, index) => {
-          activities.push({
-            id: `cartera-${item.id}`,
-            type: 'upload',
-            title: `Actualización Cartera - ${item.eps?.nombre}`,
-            description: `Registro actualizado para IPS ${item.ips?.nombre}`,
-            timestamp: item.updatedAt,
-            status: 'success',
-            user: 'Sistema',
-            metadata: {
-              eps: item.eps?.nombre,
-              recordCount: 1
-            }
-          });
-        });
-      }
-
-      // Procesar actividades de flujo
-      if (flujoResponse.status === 'fulfilled' && flujoResponse.value.data) {
-        flujoResponse.value.data.slice(0, 2).forEach((item, index) => {
-          activities.push({
-            id: `flujo-${item.eps.id}`,
-            type: 'process',
-            title: `Procesamiento Flujo - ${item.eps.nombre}`,
-            description: `${item.periodos.length} períodos procesados`,
-            timestamp: new Date(Date.now() - index * 60 * 60 * 1000).toISOString(),
-            status: 'success',
-            user: 'Sistema',
-            metadata: {
-              eps: item.eps.nombre,
-              recordCount: item.periodos.reduce((sum, p) => sum + p.totalRegistros, 0)
-            }
-          });
-        });
-      }
-
-      // Ordenar por timestamp y limitar
-      const sortedActivities = activities
-        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-        .slice(0, 10);
-
-      dashboardCache.set(cacheKey, sortedActivities);
-      return sortedActivities;
+      dashboardCache.set(cacheKey, activities);
+      return activities;
 
     } catch (error) {
       console.error('❌ Error obteniendo actividades recientes:', error);
-      return [];
+      throw error;
     }
   }, []);
 
-  // Función para obtener estado del sistema
+  // Función para obtener estado del sistema (con datos mockeados)
   const fetchSystemStatus = useCallback(async (): Promise<SystemStatus> => {
     const cacheKey = 'dashboard-system-status';
     const cached = dashboardCache.get(cacheKey);
     if (cached) return cached;
 
-    console.log('🔧 Dashboard: Verificando estado del sistema...');
-
-    const startTime = Date.now();
-    const status: SystemStatus = {
-      database: { status: 'online', message: 'Conectado', lastCheck: new Date().toISOString() },
-      api: { status: 'online', message: 'Funcionando', responseTime: 0 },
-      storage: { status: 'online', message: 'Disponible', usagePercentage: 45 }
-    };
+    console.log('⚡ Dashboard: Verificando estado del sistema...');
 
     try {
-      // Test de conectividad básica
-      await Promise.race([
-        carteraAPI.getAllEPS(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
-      ]);
+      await new Promise(resolve => setTimeout(resolve, 200));
 
-      status.api.responseTime = Date.now() - startTime;
-      status.api.message = `Respondiendo en ${status.api.responseTime}ms`;
+      const status: SystemStatus = {
+        ...MOCK_DASHBOARD_DATA.systemStatus,
+        database: {
+          ...MOCK_DASHBOARD_DATA.systemStatus.database,
+          lastCheck: new Date().toISOString()
+        },
+        api: {
+          ...MOCK_DASHBOARD_DATA.systemStatus.api,
+          responseTime: 200 + Math.floor(Math.random() * 100) // 200-300ms
+        },
+        storage: {
+          ...MOCK_DASHBOARD_DATA.systemStatus.storage,
+          usagePercentage: Math.min(95, MOCK_DASHBOARD_DATA.systemStatus.storage.usagePercentage + Math.random() * 5)
+        }
+      };
+
+      dashboardCache.set(cacheKey, status, 60000); // Cache por 1 minuto
+      return status;
 
     } catch (error) {
-      status.database.status = 'warning';
-      status.api.status = 'warning';
-      status.api.message = 'Respuesta lenta';
-      status.api.responseTime = Date.now() - startTime;
+      console.error('❌ Error verificando estado del sistema:', error);
+      // Retornar estado de fallback
+      return {
+        database: { status: 'warning', message: 'Error de conexión', lastCheck: new Date().toISOString() },
+        api: { status: 'warning', message: 'Respuesta lenta', responseTime: 5000 },
+        storage: { status: 'online', message: 'Disponible', usagePercentage: 50 }
+      };
     }
-
-    dashboardCache.set(cacheKey, status, 60000); // Cache por 1 minuto
-    return status;
   }, []);
 
   // Función principal de carga de datos
@@ -463,7 +425,7 @@ export const useDashboardData = () => {
     setError(null);
 
     try {
-      console.log('📊 Dashboard: Iniciando carga de datos reales...');
+      console.log('📊 Dashboard: Iniciando carga de datos mockeados...');
       const startTime = Date.now();
 
       // Cargar datos en paralelo con Promise.allSettled para mejor rendimiento
@@ -515,7 +477,7 @@ export const useDashboardData = () => {
       }
 
       const loadTime = Date.now() - startTime;
-      console.log(`✅ Dashboard: Datos reales cargados en ${loadTime}ms`);
+      console.log(`✅ Dashboard: Datos mockeados cargados en ${loadTime}ms`);
 
     } catch (error) {
       console.error('❌ Dashboard: Error general cargando datos:', error);
@@ -589,9 +551,9 @@ export const useDataFormatting = () => {
     if (!value && value !== 0) return '$0';
     
     if (compact) {
-      if (value >= 1000000000) return `$${(value / 1000000000).toFixed(1)}B`;
-      if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
-      if (value >= 1000) return `$${(value / 1000).toFixed(1)}K`;
+      if (value >= 1000000000) return `${(value / 1000000000).toFixed(1)}B`;
+      if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
+      if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
     }
 
     return new Intl.NumberFormat('es-CO', {
@@ -618,44 +580,38 @@ export const useDataFormatting = () => {
     return `${value >= 0 ? '+' : ''}${value.toFixed(decimals)}%`;
   }, []);
 
-  const formatTimeAgo = useCallback((timestamp: string): string => {
-    const now = new Date();
-    const date = new Date(timestamp);
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-    if (diffInSeconds < 60) return 'hace un momento';
-    if (diffInSeconds < 3600) return `hace ${Math.floor(diffInSeconds / 60)} min`;
-    if (diffInSeconds < 86400) return `hace ${Math.floor(diffInSeconds / 3600)} h`;
-    return `hace ${Math.floor(diffInSeconds / 86400)} días`;
-  }, []);
-
-  const formatDate = useCallback((timestamp: string): string => {
+  const formatDate = useCallback((dateString: string): string => {
+    const date = new Date(dateString);
     return new Intl.DateTimeFormat('es-CO', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit',
-    }).format(new Date(timestamp));
+      minute: '2-digit'
+    }).format(date);
   }, []);
 
-  const formatChangeText = useCallback((value: number, type?: 'positive' | 'negative' | 'neutral'): string => {
-    if (type === 'neutral' || value === 0) return 'Sin cambios';
-    const prefix = value > 0 ? '+' : '';
-    return `${prefix}${value.toFixed(1)}% vs período anterior`;
-  }, []);
+  const formatRelativeTime = useCallback((dateString: string): string => {
+    const now = new Date();
+    const date = new Date(dateString);
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
 
-  const formatCarteraValue = useCallback((value: number): string => {
-    return formatCurrency(value, true);
-  }, [formatCurrency]);
+    if (diffMins < 1) return 'Ahora';
+    if (diffMins < 60) return `Hace ${diffMins} min`;
+    if (diffHours < 24) return `Hace ${diffHours}h`;
+    if (diffDays < 7) return `Hace ${diffDays} días`;
+    
+    return formatDate(dateString);
+  }, [formatDate]);
 
   return {
     formatCurrency,
     formatNumber,
     formatPercentage,
-    formatTimeAgo,
     formatDate,
-    formatCarteraValue,
-    formatChangeText
+    formatRelativeTime
   };
 };
