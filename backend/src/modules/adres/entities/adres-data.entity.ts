@@ -50,21 +50,21 @@ export class AdresData {
 
   // ✅ CAMPOS DE CONTROL - exactos según tu tabla
   @Column({ 
-    type: 'tinyint',
-    default: 1,
-    name: 'activo'                   // ✅ Nombre exacto: activo
-  })
-  activo: boolean;
+  type: 'boolean',
+  default: true,
+  name: 'activo'
+})
+activo: boolean;
 
   @CreateDateColumn({ 
-    type: 'datetime',
+    type: 'timestamp',
     precision: 6,
     name: 'createdAt'                // ✅ Nombre exacto: createdAt
   })
   createdAt: Date;
 
   @UpdateDateColumn({ 
-    type: 'datetime', 
+    type: 'timestamp', 
     precision: 6,
     name: 'updatedAt'                // ✅ Nombre exacto: updatedAt
   })
