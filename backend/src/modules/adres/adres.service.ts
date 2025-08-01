@@ -820,7 +820,7 @@ async getAdresSummaryByEPS(epsId: string): Promise<{
       .andWhere('adres.activo = :activo', { activo: true })
       .getRawOne();
 
-    // Formatear resultado
+    // ✅ CORRECCIÓN: Formatear resultado filtrando períodos válidos
     const porPeriodo = await Promise.all(
       dataByPeriod.map(async (item) => {
         const periodo = await this.periodoRepository.findOne({ where: { id: item.periodoId } });
@@ -833,12 +833,20 @@ async getAdresSummaryByEPS(epsId: string): Promise<{
       })
     );
 
+    // ✅ FILTRAR períodos que existen (no null)
+    const porPeriodoValidos = porPeriodo.filter(item => item.periodo !== null) as Array<{
+      periodo: Periodo;
+      registros: number;
+      upcTotal: number;
+      valorGiradoTotal: number;
+    }>;
+
     const result = {
       eps,
       totalRegistros: parseInt(totals.totalRegistros) || 0,
       totalUPC: parseFloat(totals.totalUPC) || 0,
       totalValorGirado: parseFloat(totals.totalValorGirado) || 0,
-      porPeriodo
+      porPeriodo: porPeriodoValidos  // ✅ Solo períodos válidos
     };
 
     console.log('✅ AdresService: Summary generated successfully');
@@ -846,6 +854,96 @@ async getAdresSummaryByEPS(epsId: string): Promise<{
   } catch (error) {
     console.error('❌ AdresService: Error getting summary:', error);
     throw new BadRequestException(`Error al obtener resumen: ${error.message}`);
+  }
+}
+
+async uploadExcel(file: Express.Multer.File, epsId: string, periodoId: string): Promise<{
+  processed: number;
+  errors: string[];
+}> {
+  console.log('📤 AdresService: uploadExcel - Processing file...', {
+    fileName: file.originalname,
+    fileSize: file.size,
+    epsId,
+    periodoId
+  });
+
+  try {
+    // Verificar que la EPS existe
+    const eps = await this.epsRepository.findOne({ where: { id: epsId } });
+    if (!eps) {
+      throw new BadRequestException('EPS no encontrada');
+    }
+
+    // Verificar que el período existe
+    const periodo = await this.periodoRepository.findOne({ where: { id: periodoId } });
+    if (!periodo) {
+      throw new BadRequestException('Período no encontrado');
+    }
+
+    // Leer archivo Excel
+    const workbook = XLSX.read(file.buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+    console.log(`📋 AdresService: Processing ${jsonData.length} rows from Excel`);
+
+    const errors: string[] = [];
+    let processed = 0;
+
+    // Procesar cada fila
+    for (let i = 0; i < jsonData.length; i++) {
+      const row = jsonData[i] as any;
+      const rowNumber = i + 2; // +2 porque Excel empieza en 1 y tiene header
+
+      try {
+        // Validar campos requeridos
+        if (!row.UPC || isNaN(Number(row.UPC))) {
+          errors.push(`Fila ${rowNumber}: UPC debe ser un número válido`);
+          continue;
+        }
+
+        if (!row['Valor Girado'] || isNaN(Number(row['Valor Girado']))) {
+          errors.push(`Fila ${rowNumber}: Valor Girado debe ser un número válido`);
+          continue;
+        }
+
+        // Crear registro de ADRES
+        const adresData = this.adresDataRepository.create({
+          eps,
+          periodo,
+          epsId: eps.id,
+          periodoId: periodo.id,
+          upc: Number(row.UPC),
+          valorGirado: Number(row['Valor Girado']),
+          observaciones: row.Observaciones || null,
+          activo: true
+        });
+
+        await this.adresDataRepository.save(adresData);
+        processed++;
+
+        console.log(`✅ AdresService: Processed row ${rowNumber} successfully`);
+
+      } catch (error) {
+        console.error(`❌ AdresService: Error processing row ${rowNumber}:`, error);
+        errors.push(`Fila ${rowNumber}: ${error.message}`);
+      }
+    }
+
+    console.log(`✅ AdresService: Upload completed - ${processed} registros procesados${
+      errors.length > 0 ? ` con ${errors.length} errores` : ''
+    }`);
+
+    return {
+      processed,
+      errors
+    };
+
+  } catch (error) {
+    console.error('❌ AdresService: Error processing file:', error);
+    throw new BadRequestException(`Error al procesar archivo: ${error.message}`);
   }
 }
 
