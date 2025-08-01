@@ -9,7 +9,7 @@ import {
   FunnelIcon,
   ArrowPathIcon
 } from '@heroicons/react/24/outline';
-import { carteraAPI } from '../../../services/carteraAPI';
+import carteraAPI from '../../../services/carteraApi';
 
 interface FilterPanelProps {
   filters: any;

@@ -14,6 +14,17 @@ Sistema-alcaldia
 │  │  ├─ app.service.d.ts
 │  │  ├─ app.service.js
 │  │  ├─ app.service.js.map
+│  │  ├─ config
+│  │  │  ├─ database.config.d.ts
+│  │  │  ├─ database.config.js
+│  │  │  └─ database.config.js.map
+│  │  ├─ health
+│  │  │  ├─ health.controller.d.ts
+│  │  │  ├─ health.controller.js
+│  │  │  ├─ health.controller.js.map
+│  │  │  ├─ health.module.d.ts
+│  │  │  ├─ health.module.js
+│  │  │  └─ health.module.js.map
 │  │  ├─ main.d.ts
 │  │  ├─ main.js
 │  │  ├─ main.js.map
@@ -124,6 +135,35 @@ Sistema-alcaldia
 │  │  │  │     ├─ ips.service.d.ts
 │  │  │  │     ├─ ips.service.js
 │  │  │  │     └─ ips.service.js.map
+│  │  │  ├─ dashboards-eps-ips
+│  │  │  │  ├─ dashboards-eps-ips.controller.d.ts
+│  │  │  │  ├─ dashboards-eps-ips.controller.js
+│  │  │  │  ├─ dashboards-eps-ips.controller.js.map
+│  │  │  │  ├─ dashboards-eps-ips.module.d.ts
+│  │  │  │  ├─ dashboards-eps-ips.module.js
+│  │  │  │  ├─ dashboards-eps-ips.module.js.map
+│  │  │  │  ├─ dashboards-eps-ips.service.d.ts
+│  │  │  │  ├─ dashboards-eps-ips.service.js
+│  │  │  │  ├─ dashboards-eps-ips.service.js.map
+│  │  │  │  └─ dto
+│  │  │  │     ├─ analisis-flujo-response.dto.d.ts
+│  │  │  │     ├─ analisis-flujo-response.dto.js
+│  │  │  │     ├─ analisis-flujo-response.dto.js.map
+│  │  │  │     ├─ cartera-trazabilidad-response.dto.d.ts
+│  │  │  │     ├─ cartera-trazabilidad-response.dto.js
+│  │  │  │     ├─ cartera-trazabilidad-response.dto.js.map
+│  │  │  │     ├─ dashboard-filters.dto.d.ts
+│  │  │  │     ├─ dashboard-filters.dto.js
+│  │  │  │     ├─ dashboard-filters.dto.js.map
+│  │  │  │     ├─ metricas-comparativas-response.dto.d.ts
+│  │  │  │     ├─ metricas-comparativas-response.dto.js
+│  │  │  │     ├─ metricas-comparativas-response.dto.js.map
+│  │  │  │     ├─ tendencias-response.dto.d.ts
+│  │  │  │     ├─ tendencias-response.dto.js
+│  │  │  │     ├─ tendencias-response.dto.js.map
+│  │  │  │     ├─ top-entidades-response.dto.d.ts
+│  │  │  │     ├─ top-entidades-response.dto.js
+│  │  │  │     └─ top-entidades-response.dto.js.map
 │  │  │  └─ flujo
 │  │  │     ├─ dto
 │  │  │     │  ├─ create-flujo-eps-data.dto.d.ts
@@ -168,6 +208,11 @@ Sistema-alcaldia
 │  │  ├─ app.controller.ts
 │  │  ├─ app.module.ts
 │  │  ├─ app.service.ts
+│  │  ├─ config
+│  │  │  └─ database.config.ts
+│  │  ├─ health
+│  │  │  ├─ health.controller.ts
+│  │  │  └─ health.module.ts
 │  │  ├─ main.ts
 │  │  └─ modules
 │  │     ├─ adres
@@ -214,6 +259,17 @@ Sistema-alcaldia
 │  │     │  └─ services
 │  │     │     ├─ eps.service.ts
 │  │     │     └─ ips.service.ts
+│  │     ├─ dashboards-eps-ips
+│  │     │  ├─ dashboards-eps-ips.controller.ts
+│  │     │  ├─ dashboards-eps-ips.module.ts
+│  │     │  ├─ dashboards-eps-ips.service.ts
+│  │     │  └─ dto
+│  │     │     ├─ analisis-flujo-response.dto.ts
+│  │     │     ├─ cartera-trazabilidad-response.dto.ts
+│  │     │     ├─ dashboard-filters.dto.ts
+│  │     │     ├─ metricas-comparativas-response.dto.ts
+│  │     │     ├─ tendencias-response.dto.ts
+│  │     │     └─ top-entidades-response.dto.ts
 │  │     └─ flujo
 │  │        ├─ dto
 │  │        │  ├─ create-flujo-eps-data.dto.ts
@@ -232,9 +288,15 @@ Sistema-alcaldia
 │  │  └─ jest-e2e.json
 │  ├─ tsconfig.build.json
 │  └─ tsconfig.json
-├─ database
 ├─ frontend
 │  ├─ .env
+│  ├─ .env.production
+│  ├─ dist
+│  │  ├─ assets
+│  │  │  ├─ index-BFNaeOhI.css
+│  │  │  └─ index-fiM7hhFu.js
+│  │  ├─ index.html
+│  │  └─ vite.svg
 │  ├─ eslint.config.js
 │  ├─ index.html
 │  ├─ package-lock.json
@@ -260,6 +322,24 @@ Sistema-alcaldia
 │  │  │  │  └─ InformacionCartera.tsx
 │  │  │  ├─ dashboard
 │  │  │  │  └─ Dashboard.tsx
+│  │  │  ├─ dashboards-eps-ips
+│  │  │  │  ├─ components
+│  │  │  │  │  └─ FilterPanel.tsx
+│  │  │  │  ├─ graficas
+│  │  │  │  │  ├─ GraficasCartera.tsx
+│  │  │  │  │  ├─ GraficasFlujo.tsx
+│  │  │  │  │  ├─ GraficasModule.tsx
+│  │  │  │  │  ├─ GraficasTendencias.tsx
+│  │  │  │  │  └─ MetricasComparativas.tsx
+│  │  │  │  ├─ index.tsx
+│  │  │  │  ├─ reportes
+│  │  │  │  │  ├─ ReporteCartera.tsx
+│  │  │  │  │  ├─ ReporteComparativo.tsx
+│  │  │  │  │  ├─ ReporteEjecutivo.tsx
+│  │  │  │  │  ├─ ReporteFlujo.tsx
+│  │  │  │  │  └─ ReportesModule.tsx
+│  │  │  │  └─ services
+│  │  │  │     └─ dashboardsEpsIpsAPI.ts
 │  │  │  ├─ flujo
 │  │  │  │  ├─ ExcelUploadModal.tsx
 │  │  │  │  └─ InformacionFlujo.tsx
@@ -281,6 +361,7 @@ Sistema-alcaldia
 │  │  ├─ contexts
 │  │  │  └─ AuthContext.tsx
 │  │  ├─ hooks
+│  │  │  ├─ useDashboardData.ts
 │  │  │  └─ useSweetAlert.ts
 │  │  ├─ index.css
 │  │  ├─ main.tsx
@@ -288,8 +369,15 @@ Sistema-alcaldia
 │  │  │  ├─ adresApi.ts
 │  │  │  ├─ api.ts
 │  │  │  ├─ carteraApi.ts
+│  │  │  ├─ dashboardAPI.ts
 │  │  │  ├─ flujoApi.ts
 │  │  │  └─ gestionApi.ts
+│  │  ├─ styles
+│  │  │  ├─ dashboard.css
+│  │  │  └─ responsive.css
+│  │  ├─ utils
+│  │  │  ├─ exportUtils.ts
+│  │  │  └─ formatters.ts
 │  │  └─ vite-env.d.ts
 │  ├─ tailwind.config.js
 │  ├─ tsconfig.app.json
@@ -297,6 +385,8 @@ Sistema-alcaldia
 │  ├─ tsconfig.node.json
 │  ├─ vite-env.d.ts
 │  └─ vite.config.ts
-└─ README.md
+├─ netlify.toml
+├─ README.md
+└─ render.yaml
 
 ```
