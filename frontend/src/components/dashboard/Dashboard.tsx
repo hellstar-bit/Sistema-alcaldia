@@ -268,6 +268,12 @@ const RecentActivityItem: React.FC<{
   );
 };
 
+const formatChangeText = (change: number, changeType: 'positive' | 'negative' | 'neutral'): string => {
+  if (changeType === 'neutral') return 'Sin cambios';
+  const prefix = change >= 0 ? '+' : '';
+  return `${prefix}${change}%`;
+};
+
 export const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -288,12 +294,10 @@ export const Dashboard: React.FC = () => {
     refreshSystemStatus
   } = useDashboardData();
 
-  const { 
+   const { 
     formatCurrency, 
     formatNumber, 
-    formatTimeAgo, 
-    formatCarteraValue,
-    formatChangeText
+    formatRelativeTime
   } = useDataFormatting();
 
   // Datos principales del dashboard usando datos reales
@@ -301,8 +305,8 @@ export const Dashboard: React.FC = () => {
     {
       id: 'cartera-total',
       title: 'Cartera Total',
-      value: stats ? formatCarteraValue(stats.carteraTotal.value) : '$0',
-      change: stats ? formatChangeText(stats.carteraTotal.change, stats.carteraTotal.changeType) : 'Cargando...',
+      value: stats ? formatCurrency(stats.carteraTotal.value) : '$0',
+      change: stats ? `${stats.carteraTotal.change >= 0 ? '+' : ''}${stats.carteraTotal.change}%` : 'Cargando...',
       changeType: stats?.carteraTotal.changeType || 'neutral',
       icon: CurrencyDollarIcon,
       color: 'bg-primary-500'
@@ -701,7 +705,7 @@ export const Dashboard: React.FC = () => {
                 key={activity.id} 
                 activity={{
                   ...activity,
-                  timestamp: formatTimeAgo(activity.timestamp)
+                  timestamp: formatRelativeTime(activity.timestamp)
                 }} 
                 screenSize={screenSize}
               />
