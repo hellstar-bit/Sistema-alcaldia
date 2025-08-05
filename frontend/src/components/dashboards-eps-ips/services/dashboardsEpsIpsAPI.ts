@@ -21,6 +21,7 @@ interface DashboardFilters {
   cumplimientoMax?: number;
 }
 
+
 // ✅ DATOS REALISTAS DE EPS COLOMBIANAS
 const EPS_COLOMBIA_DATA = [
   {
@@ -186,20 +187,37 @@ const IPS_DATA = [
 ];
 
 // ✅ PERÍODOS DISPONIBLES
-const PERIODOS_DATA = [
-  { id: '1', nombre: 'Enero', year: 2025, mes: 1 },
-  { id: '2', nombre: 'Febrero', year: 2025, mes: 2 },
-  { id: '3', nombre: 'Marzo', year: 2025, mes: 3 },
-  { id: '4', nombre: 'Abril', year: 2025, mes: 4 },
-  { id: '5', nombre: 'Mayo', year: 2025, mes: 5 },
-  { id: '6', nombre: 'Junio', year: 2025, mes: 6 },
-  { id: '7', nombre: 'Julio', year: 2025, mes: 7 },
-  { id: '8', nombre: 'Agosto', year: 2025, mes: 8 },
-  { id: '9', nombre: 'Septiembre', year: 2025, mes: 9 },
-  { id: '10', nombre: 'Octubre', year: 2025, mes: 10 },
-  { id: '11', nombre: 'Noviembre', year: 2025, mes: 11 },
-  { id: '12', nombre: 'Diciembre', year: 2025, mes: 12 }
-];
+const PERIODOS_DATA = (() => {
+  interface Periodo {
+    id: string;
+    nombre: string;
+    mes: number;
+    year: number;
+    activo: boolean;
+  }
+  
+  const periodos: Periodo[] = [];
+  const meses = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ];
+  
+  // Generar períodos para 2023, 2024, 2025
+  for (let year = 2023; year <= 2025; year++) {
+    const maxMes = year === 2025 ? 8 : 12; // Solo hasta agosto 2025
+    for (let mes = 1; mes <= maxMes; mes++) {
+      periodos.push({
+        id: `${year}-${mes.toString().padStart(2, '0')}`,
+        nombre: `${meses[mes - 1]} ${year}`,
+        mes,
+        year,
+        activo: true
+      });
+    }
+  }
+  
+  return periodos.reverse(); // Más recientes primero
+})();
 
 const TIPOS_CONTRATO = ['Capitación', 'Evento', 'Mixto', 'Global Prospectivo'];
 
@@ -258,9 +276,11 @@ const generarDatosCartera = (eps: any, ips: any) => {
 
 const generarDatosFlujo = (eps: any, ips: any, periodo: any) => {
   const baseFacturado = eps.valorFacturado / 12 / 15; // Mensual por IPS
-  const variacion = 0.8 + Math.random() * 0.4; // ±20% variación
-
-  const valorFacturado = Math.round(baseFacturado * variacion);
+  const variacionEstacional = Math.sin((periodo.mes / 12) * 2 * Math.PI) * 0.1; // Variación por mes
+  const variacionAleatoria = 0.8 + Math.random() * 0.4; // ±20% variación
+  
+  const factorTotal = variacionAleatoria * (1 + variacionEstacional);
+  const valorFacturado = Math.round(baseFacturado * factorTotal);
   const valorGlosa = Math.round(valorFacturado * (0.02 + Math.random() * 0.08)); // 2-10% glosas
   const reconocido = valorFacturado - valorGlosa;
   const valorPagado = Math.round(reconocido * (eps.cumplimiento / 100));
@@ -271,7 +291,9 @@ const generarDatosFlujo = (eps: any, ips: any, periodo: any) => {
     ipsId: ips.id,
     ipsNombre: ips.nombre,
     periodoId: periodo.id,
-    periodoNombre: `${periodo.nombre} ${periodo.year}`,
+    periodoNombre: periodo.nombre,
+    año: periodo.year,
+    mes: periodo.mes,
     incremento: eps.incrementoPromedio + (Math.random() - 0.5) * 2,
     tipoContrato: eps.tipoContrato[Math.floor(Math.random() * eps.tipoContrato.length)],
     valorFacturado,
@@ -306,159 +328,224 @@ export const dashboardsEpsIpsAPI = {
   },
 
   // Obtener trazabilidad de cartera con datos realistas
-  async getCarteraTrazabilidad(filters: DashboardFilters): Promise<any> {
-    return new Promise(resolve => {
-      setTimeout(() => {
-        console.log('📊 Generando trazabilidad de cartera...');
+  async getCarteraTrazabilidad(filters: DashboardFilters = { tipoAnalisis: 'cartera' }): Promise<any> {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      console.log('📊 Generando trazabilidad de cartera con filtros:', filters);
 
-        const epsSeleccionadas = filters.epsIds?.length
-          ? EPS_COLOMBIA_DATA.filter(eps => filters.epsIds!.includes(eps.id))
-          : EPS_COLOMBIA_DATA;
+      // Filtrar EPS según selección
+      const epsSeleccionadas = filters.epsIds?.length
+        ? EPS_COLOMBIA_DATA.filter(eps => filters.epsIds!.includes(eps.id))
+        : EPS_COLOMBIA_DATA;
 
-        const trazabilidadData: any[] = [];
+      // Filtrar períodos según selección
+      const periodosSeleccionados = filters.periodoIds?.length
+        ? PERIODOS_DATA.filter(periodo => filters.periodoIds!.includes(periodo.id))
+        : PERIODOS_DATA.slice(0, 6); // Últimos 6 meses por defecto
 
-        epsSeleccionadas.forEach(eps => {
+      console.log('✅ Aplicando filtros:', {
+        epsOriginal: EPS_COLOMBIA_DATA.length,
+        epsSeleccionadas: epsSeleccionadas.length,
+        periodosOriginales: PERIODOS_DATA.length,
+        periodosSeleccionados: periodosSeleccionados.length
+      });
+
+      const trazabilidadData: any[] = [];
+
+      epsSeleccionadas.forEach(eps => {
+        periodosSeleccionados.forEach(periodo => {
           // Generar 8-15 IPS por EPS
           const numIPS = 8 + Math.floor(Math.random() * 8);
           const ipsParaEPS = IPS_DATA.slice(0, numIPS);
 
           ipsParaEPS.forEach(ips => {
-            trazabilidadData.push(generarDatosCartera(eps, ips));
+            const datos = generarDatosCartera(eps, ips);
+            trazabilidadData.push({
+              ...datos,
+              periodoId: periodo.id,
+              periodoNombre: periodo.nombre,
+              año: periodo.year,
+              mes: periodo.mes
+            });
           });
         });
+      });
 
-        resolve(trazabilidadData);
-      }, 500);
-    });
-  },
+      console.log('✅ Datos de cartera generados:', {
+        total: trazabilidadData.length,
+        porEPS: trazabilidadData.length / epsSeleccionadas.length,
+        porPeriodo: trazabilidadData.length / periodosSeleccionados.length
+      });
 
+      resolve(trazabilidadData);
+    }, 500);
+  });
+},
   // Obtener análisis de flujo con datos realistas
-  async getAnalisisFlujo(filters: DashboardFilters): Promise<any> {
-    return new Promise(resolve => {
-      setTimeout(() => {
-        console.log('💰 Generando análisis de flujo...');
+  async getAnalisisFlujo(filters: DashboardFilters = { tipoAnalisis: 'flujo' }): Promise<any> {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      console.log('💰 Generando análisis de flujo con filtros:', filters);
 
-        const epsSeleccionadas = filters.epsIds?.length
-          ? EPS_COLOMBIA_DATA.filter(eps => filters.epsIds!.includes(eps.id))
-          : EPS_COLOMBIA_DATA;
+      // Filtrar EPS según selección
+      const epsSeleccionadas = filters.epsIds?.length
+        ? EPS_COLOMBIA_DATA.filter(eps => filters.epsIds!.includes(eps.id))
+        : EPS_COLOMBIA_DATA;
 
-        const totalFacturado = epsSeleccionadas.reduce((sum, eps) => sum + eps.valorFacturado, 0);
-        const totalReconocido = epsSeleccionadas.reduce((sum, eps) => sum + eps.reconocido, 0);
-        const totalPagado = epsSeleccionadas.reduce((sum, eps) => sum + eps.pagado, 0);
-        const cumplimientoPromedio = epsSeleccionadas.reduce((sum, eps) => sum + eps.cumplimiento, 0) / epsSeleccionadas.length;
-        const incrementoPromedio = epsSeleccionadas.reduce((sum, eps) => sum + eps.incrementoPromedio, 0) / epsSeleccionadas.length;
+      // Filtrar períodos según selección
+      const periodosSeleccionados = filters.periodoIds?.length
+        ? PERIODOS_DATA.filter(periodo => filters.periodoIds!.includes(periodo.id))
+        : PERIODOS_DATA.slice(0, 6);
 
-        // Generar distribución por EPS
-        const distribuccionPorEPS = epsSeleccionadas.map(eps => ({
-          nombre: eps.nombre,
-          valor: eps.valorFacturado,
-          porcentaje: (eps.valorFacturado / totalFacturado) * 100,
-          cumplimiento: eps.cumplimiento,
-          color: `hsl(${parseInt(eps.id) * 45}, 70%, 60%)`
-        }));
+      const totalFacturado = epsSeleccionadas.reduce((sum, eps) => sum + eps.valorFacturado, 0);
+      const totalReconocido = epsSeleccionadas.reduce((sum, eps) => sum + eps.reconocido, 0);
+      const totalPagado = epsSeleccionadas.reduce((sum, eps) => sum + eps.pagado, 0);
+      const cumplimientoPromedio = epsSeleccionadas.reduce((sum, eps) => sum + eps.cumplimiento, 0) / epsSeleccionadas.length;
+      const incrementoPromedio = epsSeleccionadas.reduce((sum, eps) => sum + eps.incrementoPromedio, 0) / epsSeleccionadas.length;
 
-        // Generar tendencia mensual
-        const tendenciaMensual = PERIODOS_DATA.map((periodo, index) => {
-          const base = totalFacturado / 12;
-          const variacion = Math.sin((index / 12) * 2 * Math.PI) * 0.1 + (Math.random() - 0.5) * 0.1;
-          const facturado = base * (1 + variacion);
-          const pagado = facturado * (cumplimientoPromedio / 100);
+      // Generar distribución por EPS (solo las seleccionadas)
+      const distribuccionPorEPS = epsSeleccionadas.map((eps, index) => ({
+        nombre: eps.nombre,
+        valor: eps.valorFacturado,
+        porcentaje: (eps.valorFacturado / totalFacturado) * 100,
+        cumplimiento: eps.cumplimiento,
+        color: `hsl(${index * 45}, 70%, 60%)`
+      }));
 
-          return {
-            mes: periodo.nombre,
-            cumplimiento: 75 + Math.random() * 20, // 75-95%
-            meta: 92,
-            facturado: Math.round(facturado),
-            reconocido: Math.round(facturado * 0.93),
-            pagado: Math.round(pagado)
-          };
+      // Generar tendencia mensual (solo períodos seleccionados)
+      const tendenciaMensual = periodosSeleccionados.map((periodo, index) => {
+        const base = totalFacturado / periodosSeleccionados.length;
+        const variacion = Math.sin((index / 12) * 2 * Math.PI) * 0.1 + (Math.random() - 0.5) * 0.1;
+        const facturado = base * (1 + variacion);
+        const pagado = facturado * (cumplimientoPromedio / 100);
+
+        return {
+          mes: periodo.nombre.split(' ')[0], // Solo el mes
+          periodo: periodo.nombre,
+          cumplimiento: 75 + Math.random() * 20,
+          meta: 92,
+          facturado: Math.round(facturado),
+          reconocido: Math.round(facturado * 0.93),
+          pagado: Math.round(pagado)
+        };
+      });
+
+      // Generar datos de flujo detallados
+      const flujoDetallado: any[] = [];
+      epsSeleccionadas.forEach(eps => {
+        periodosSeleccionados.forEach(periodo => {
+          const numIPS = 8 + Math.floor(Math.random() * 8);
+          const ipsParaEPS = IPS_DATA.slice(0, numIPS);
+          
+          ipsParaEPS.forEach(ips => {
+            flujoDetallado.push(generarDatosFlujo(eps, ips, periodo));
+          });
         });
+      });
 
-        resolve({
-          totalFacturado,
-          totalReconocido,
-          totalPagado,
-          cumplimientoPromedio,
-          incrementoPromedio,
-          tiposContrato: TIPOS_CONTRATO,
-          distribuccionPorEPS,
-          tendenciaMensual
-        });
-      }, 600);
-    });
-  },
+      resolve({
+        totalFacturado,
+        totalReconocido,
+        totalPagado,
+        cumplimientoPromedio,
+        incrementoPromedio,
+        tiposContrato: TIPOS_CONTRATO,
+        distribuccionPorEPS,
+        tendenciaMensual,
+        flujoData: flujoDetallado, // Agregar datos detallados
+        resumen: {
+          epsAnalizadas: epsSeleccionadas.length,
+          periodosAnalizados: periodosSeleccionados.length,
+          registrosGenerados: flujoDetallado.length
+        }
+      });
+    }, 600);
+  });
+},
 
   // Obtener tendencias y proyecciones
-  async getTendenciasYProyecciones(filters: DashboardFilters): Promise<any> {
-    return new Promise(resolve => {
-      setTimeout(() => {
-        console.log('📈 Generando tendencias y proyecciones...');
+  async getTendenciasYProyecciones(filters: DashboardFilters = { tipoAnalisis: 'ambos' }): Promise<any> {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      console.log('📈 Generando tendencias y proyecciones con filtros:', filters);
 
-        const epsSeleccionadas = filters.epsIds?.length
-          ? EPS_COLOMBIA_DATA.filter(eps => filters.epsIds!.includes(eps.id))
-          : EPS_COLOMBIA_DATA;
+      const epsSeleccionadas = filters.epsIds?.length
+        ? EPS_COLOMBIA_DATA.filter(eps => filters.epsIds!.includes(eps.id))
+        : EPS_COLOMBIA_DATA;
 
-        // Evolución de cartera mensual
-        const carteraEvolucion = PERIODOS_DATA.map((periodo, index) => {
-          const baseCartera = epsSeleccionadas.reduce((sum, eps) => sum + eps.valorFacturado, 0) / 12;
-          const variacion = Math.sin((index / 12) * 2 * Math.PI) * 0.08 + (Math.random() - 0.5) * 0.05;
-          const tendencia = index * 0.01; // Crecimiento del 1% mensual
+      const periodosSeleccionados = filters.periodoIds?.length
+        ? PERIODOS_DATA.filter(periodo => filters.periodoIds!.includes(periodo.id))
+        : PERIODOS_DATA.slice(0, 12); // Último año por defecto
 
-          return {
-            periodo: `${periodo.nombre} 2025`,
-            carteraTotal: Math.round(baseCartera * (1 + variacion + tendencia) / 1000000), // En millones
-            variacionMensual: (variacion + tendencia) * 100,
-            cantidadEPS: epsSeleccionadas.length,
-            cantidadIPS: epsSeleccionadas.length * 12 // Promedio de IPS por EPS
-          };
-        });
+      // Evolución de cartera mensual (solo períodos seleccionados)
+      const carteraEvolucion = periodosSeleccionados.map((periodo, index) => {
+        const baseCartera = epsSeleccionadas.reduce((sum, eps) => sum + eps.valorFacturado, 0) / periodosSeleccionados.length;
+        const variacion = Math.sin((index / 12) * 2 * Math.PI) * 0.08 + (Math.random() - 0.5) * 0.05;
+        const tendencia = index * 0.01;
 
-        // Proyecciones futuras
-        const proyecciones = [
-          { periodo: 'Ene 2025', carteraProyectada: carteraEvolucion[11].carteraTotal * 1.05, confianza: 85 },
-          { periodo: 'Feb 2025', carteraProyectada: carteraEvolucion[11].carteraTotal * 1.08, confianza: 78 },
-          { periodo: 'Mar 2025', carteraProyectada: carteraEvolucion[11].carteraTotal * 1.12, confianza: 72 }
-        ];
+        return {
+          periodo: periodo.nombre,
+          periodoId: periodo.id,
+          carteraTotal: Math.round(baseCartera * (1 + variacion + tendencia) / 1000000), // En millones
+          variacionMensual: (variacion + tendencia) * 100,
+          cantidadEPS: epsSeleccionadas.length,
+          cantidadIPS: epsSeleccionadas.length * 12,
+          año: periodo.year,
+          mes: periodo.mes
+        };
+      });
 
-        // Alertas
-        const alertas: Array<{
-          tipo: string;
-          mensaje: string;
-          severidad: string;
-          entidad: string;
-          valor: number;
-        }> = [];
+      // Proyecciones futuras basadas en EPS seleccionadas
+      const ultimoValor = carteraEvolucion[carteraEvolucion.length - 1]?.carteraTotal || 0;
+      const proyecciones = [
+        { periodo: 'Próximo mes', carteraProyectada: ultimoValor * 1.03, confianza: 85 },
+        { periodo: 'Próximo trimestre', carteraProyectada: ultimoValor * 1.08, confianza: 78 },
+        { periodo: 'Próximo semestre', carteraProyectada: ultimoValor * 1.15, confianza: 65 }
+      ];
 
-        epsSeleccionadas.forEach(eps => {
-          if (eps.cumplimiento < 85) {
-            alertas.push({
-              tipo: 'cumplimiento_bajo',
-              mensaje: `${eps.nombre} tiene cumplimiento del ${eps.cumplimiento.toFixed(1)}%`,
-              severidad: eps.cumplimiento < 80 ? 'alta' : 'media',
-              entidad: eps.nombre,
-              valor: eps.cumplimiento
-            });
-          }
+      // Alertas específicas para EPS seleccionadas
+      const alertas: Array<{
+        tipo: string;
+        mensaje: string;
+        severidad: string;
+        entidad: string;
+        valor: number;
+      }> = [];
 
-          if (eps.incrementoPromedio > 5) {
-            alertas.push({
-              tipo: 'incremento_alto',
-              mensaje: `${eps.nombre} tiene incremento del ${eps.incrementoPromedio.toFixed(1)}%`,
-              severidad: 'media',
-              entidad: eps.nombre,
-              valor: eps.incrementoPromedio
-            });
-          }
-        });
+      epsSeleccionadas.forEach(eps => {
+        if (eps.cumplimiento < 85) {
+          alertas.push({
+            tipo: 'cumplimiento_bajo',
+            mensaje: `${eps.nombre} tiene cumplimiento del ${eps.cumplimiento.toFixed(1)}%`,
+            severidad: eps.cumplimiento < 80 ? 'alta' : 'media',
+            entidad: eps.nombre,
+            valor: eps.cumplimiento
+          });
+        }
 
-        resolve({
-          carteraEvolucion,
-          proyecciones,
-          alertas
-        });
-      }, 400);
-    });
-  },
+        if (eps.incrementoPromedio > 5) {
+          alertas.push({
+            tipo: 'incremento_alto',
+            mensaje: `${eps.nombre} tiene incremento del ${eps.incrementoPromedio.toFixed(1)}%`,
+            severidad: 'media',
+            entidad: eps.nombre,
+            valor: eps.incrementoPromedio
+          });
+        }
+      });
+
+      resolve({
+        carteraEvolucion,
+        proyecciones,
+        alertas,
+        filtrosAplicados: {
+          eps: epsSeleccionadas.length,
+          periodos: periodosSeleccionados.length
+        }
+      });
+    }, 400);
+  });
+},
 
   // Obtener métricas comparativas
   async getMetricasComparativas(filters: DashboardFilters): Promise<any> {
@@ -496,6 +583,25 @@ export const dashboardsEpsIpsAPI = {
       }, 300);
     });
   },
+
+  async getEPSById(epsId: string): Promise<any> {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      const eps = EPS_COLOMBIA_DATA.find(e => e.id === epsId);
+      resolve(eps || null);
+    }, 100);
+  });
+},
+
+// Obtener período específico por ID
+async getPeriodoById(periodoId: string): Promise<any> {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      const periodo = PERIODOS_DATA.find(p => p.id === periodoId);
+      resolve(periodo || null);
+    }, 100);
+  });
+},
 
   // Obtener top entidades
   async getTopEntidades(tipo: 'eps' | 'ips', limit: number = 10, filters: DashboardFilters = { tipoAnalisis: 'ambos' }): Promise<any> {
@@ -831,6 +937,72 @@ export const dashboardsEpsIpsAPI = {
         }
       }, 400);
     });
+  }
+  
+};
+
+export const filtrosUtils = {
+  
+  // Validar si los filtros están aplicados
+  hayFiltrosAplicados: (filters: DashboardFilters): boolean => {
+    return ((filters.epsIds?.length ?? 0) > 0) ||
+           ((filters.periodoIds?.length ?? 0) > 0) ||
+           ((filters.ipsIds?.length ?? 0) > 0);
+  },
+
+  // Obtener resumen de filtros aplicados
+  obtenerResumenFiltros: (filters: DashboardFilters): string => {
+    const resumen: string[] = [];
+    
+    if (filters.epsIds && filters.epsIds.length > 0) {
+      resumen.push(`${filters.epsIds.length} EPS`);
+    }
+    
+    if (filters.periodoIds && filters.periodoIds.length > 0) {
+      resumen.push(`${filters.periodoIds.length} períodos`);
+    }
+    
+    if (filters.ipsIds && filters.ipsIds.length > 0) {
+      resumen.push(`${filters.ipsIds.length} IPS`);
+    }
+    
+    if (filters.tipoAnalisis !== 'ambos') {
+      resumen.push(`análisis: ${filters.tipoAnalisis}`);
+    }
+    
+    return resumen.length > 0 ? resumen.join(' • ') : 'Sin filtros aplicados';
+  },
+
+  // Limpiar filtros
+  limpiarFiltros: (): DashboardFilters => ({
+    epsIds: [],
+    ipsIds: [],
+    periodoIds: [],
+    fechaInicio: '',
+    fechaFin: '',
+    tipoAnalisis: 'ambos'
+  }),
+
+  // Aplicar filtro rápido
+  aplicarFiltroRapido: (tipo: 'top-eps' | 'ultimo-trimestre' | 'ultimo-semestre' | 'año-actual'): Partial<DashboardFilters> => {
+    switch (tipo) {
+      case 'top-eps':
+        return { epsIds: EPS_COLOMBIA_DATA.slice(0, 5).map(eps => eps.id) };
+      
+      case 'ultimo-trimestre':
+        return { periodoIds: PERIODOS_DATA.slice(0, 3).map(p => p.id) };
+      
+      case 'ultimo-semestre':
+        return { periodoIds: PERIODOS_DATA.slice(0, 6).map(p => p.id) };
+      
+      case 'año-actual':
+        return { 
+          periodoIds: PERIODOS_DATA.filter(p => p.year === 2025).map(p => p.id) 
+        };
+      
+      default:
+        return {};
+    }
   }
 };
 
