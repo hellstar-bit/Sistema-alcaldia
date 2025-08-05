@@ -313,7 +313,6 @@ const shouldRenderTreeMap = React.useMemo(() => {
   const chartOptions = [
     { id: 'evolucion', label: 'Evolución Temporal', icon: ArrowTrendingUpIcon },
     { id: 'distribucion', label: 'Distribución EPS', icon: CurrencyDollarIcon },
-    { id: 'treemap', label: 'Mapa de Cartera', icon: BuildingLibraryIcon },
     { id: 'relaciones', label: 'Relaciones Críticas', icon: ExclamationTriangleIcon },
     { id: 'comparativo', label: 'Análisis Comparativo', icon: UsersIcon }
   ];

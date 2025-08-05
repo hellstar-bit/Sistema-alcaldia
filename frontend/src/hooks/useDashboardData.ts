@@ -87,7 +87,7 @@ const MOCK_DASHBOARD_DATA = {
       changeType: 'positive' as const
     },
     epsActivas: {
-      value: 24,
+      value: 8,
       change: 0,
       changeType: 'neutral' as const
     },

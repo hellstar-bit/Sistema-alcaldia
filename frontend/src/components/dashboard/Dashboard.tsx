@@ -314,7 +314,7 @@ export const Dashboard: React.FC = () => {
     {
       id: 'eps-activas',
       title: 'EPS Activas',
-      value: stats ? formatNumber(stats.epsActivas.value) : '0',
+      value: stats ? formatNumber(stats.epsActivas.value) : '8',
       change: stats ? formatChangeText(stats.epsActivas.change, stats.epsActivas.changeType) : 'Cargando...',
       changeType: stats?.epsActivas.changeType || 'neutral',
       icon: BuildingLibraryIcon,
