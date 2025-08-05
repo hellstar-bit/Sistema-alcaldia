@@ -511,7 +511,7 @@ const shouldRenderTreeMap = React.useMemo(() => {
 
                 {/* ✅ CORRECCIÓN: TreeMap de Cartera */}
                 {selectedChart === 'treemap' && (
-                  <div className="h-full">
+                  <div className="h-full">  
                     {shouldRenderTreeMap ? (
                       <ResponsiveContainer width="100%" height="100%">
                         <Treemap
