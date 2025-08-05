@@ -1,432 +1,315 @@
+// frontend/src/components/dashboards-eps-ips/components/FilterPanel.tsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  FunnelIcon,
   XMarkIcon,
   CalendarDaysIcon,
   BuildingLibraryIcon,
-  CheckIcon,
+  UsersIcon,
+  FunnelIcon,
   ArrowPathIcon
 } from '@heroicons/react/24/outline';
-import { dashboardsEpsIpsAPI } from '../services/dashboardsEpsIpsAPI';
+import carteraAPI from '../../../services/carteraApi';
 
 interface FilterPanelProps {
-  filters: DashboardFilters;
-  onFiltersChange: (filters: DashboardFilters) => void;
-  loading?: boolean;
-}
-
-interface DashboardFilters {
-  epsIds: string[];
-  ipsIds: string[];
-  periodoIds: string[];
-  fechaInicio: string;
-  fechaFin: string;
-  tipoAnalisis: 'cartera' | 'flujo' | 'ambos';
-}
-
-interface EPSOption {
-  id: string;
-  nombre: string;
-  activo: boolean;
-}
-
-interface PeriodoOption {
-  id: string;
-  nombre: string;
-  mes: number;
-  year: number;
-  activo: boolean;
+  filters: any;
+  onFiltersChange: (filters: any) => void;
+  onClose: () => void;
 }
 
 export const FilterPanel: React.FC<FilterPanelProps> = ({
   filters,
   onFiltersChange,
-  loading = false
+  onClose
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [epsOptions, setEpsOptions] = useState<EPSOption[]>([]);
-  const [periodoOptions, setPeriodoOptions] = useState<PeriodoOption[]>([]);
-  const [loadingOptions, setLoadingOptions] = useState(false);
+  const [epsList, setEpsList] = useState<any[]>([]);
+  const [ipsList, setIpsList] = useState<any[]>([]);
+  const [periodosList, setPeriodosList] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [localFilters, setLocalFilters] = useState(filters);
 
-  // Cargar opciones de EPS y períodos
   useEffect(() => {
     loadFilterOptions();
   }, []);
 
   const loadFilterOptions = async () => {
-    setLoadingOptions(true);
+    setLoading(true);
     try {
-      const [epsData, periodosData] = await Promise.all([
-        dashboardsEpsIpsAPI.getEPSList(),
-        dashboardsEpsIpsAPI.getPeriodos()
+      const [epsResponse, ipsResponse, periodosResponse] = await Promise.all([
+        carteraAPI.getAllEPS(),
+        carteraAPI.getAllIPS(),
+        carteraAPI.getAllPeriodos()
       ]);
 
-      // Procesar EPS (incluir las EPS colombianas principales)
-      const epsColombianasBase = [
-        'NUEVA EPS', 'COMPENSAR', 'FAMISANAR', 'SANITAS', 'SURA',
-        'COOSALUD', 'SALUD TOTAL', 'MUTUALSER'
-      ];
-
-      const epsProcessed = epsData && Array.isArray(epsData) ? epsData.map((eps: any) => ({
-        id: eps.id || eps.nombre,
-        nombre: eps.nombre,
-        activo: eps.activo !== false
-      })) : epsColombianasBase.map((nombre, index) => ({
-        id: `eps-${index + 1}`,
-        nombre,
-        activo: true
-      }));
-
-      setEpsOptions(epsProcessed);
-
-      // Procesar períodos (generar períodos para 2023, 2024, 2025)
-      if (periodosData && Array.isArray(periodosData)) {
-        setPeriodoOptions(periodosData);
-      } else {
-        // Generar períodos por defecto para los últimos 3 años
-        const periodosGenerados: PeriodoOption[] = [];
-        const currentYear = 2025;
-        const meses = [
-          'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-          'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-        ];
-
-        for (let year = currentYear - 2; year <= currentYear; year++) {
-          const maxMes = year === currentYear ? 8 : 12; // Solo hasta agosto 2025
-          for (let mes = 1; mes <= maxMes; mes++) {
-            periodosGenerados.push({
-              id: `${year}-${mes.toString().padStart(2, '0')}`,
-              nombre: `${meses[mes - 1]} ${year}`,
-              mes,
-              year,
-              activo: true
-            });
-          }
-        }
-
-        setPeriodoOptions(periodosGenerados.reverse()); // Más recientes primero
-      }
-
+      setEpsList(epsResponse.data.filter((eps: any) => eps.activa));
+      setIpsList(ipsResponse.data.filter((ips: any) => ips.activa));
+      setPeriodosList(periodosResponse.data.filter((periodo: any) => periodo.activo)
+        .sort((a: any, b: any) => {
+          if (a.year !== b.year) return b.year - a.year;
+          return b.mes - a.mes;
+        }));
     } catch (error) {
-      console.error('❌ Error loading filter options:', error);
+      console.error('Error loading filter options:', error);
     } finally {
-      setLoadingOptions(false);
+      setLoading(false);
     }
   };
 
-  // Manejar cambios en los filtros
-  const handleFilterChange = (key: keyof DashboardFilters, value: any) => {
-    const newFilters = { ...filters, [key]: value };
-    onFiltersChange(newFilters);
+  const handleLocalFilterChange = (key: string, value: any) => {
+    setLocalFilters((prev: any) => ({
+      ...prev,
+      [key]: value
+    }));
   };
 
-  // Toggle EPS seleccionada
-  const toggleEPS = (epsId: string) => {
-    const newEpsIds = filters.epsIds.includes(epsId)
-      ? filters.epsIds.filter(id => id !== epsId)
-      : [...filters.epsIds, epsId];
-    
-    handleFilterChange('epsIds', newEpsIds);
+  const handleApplyFilters = () => {
+    onFiltersChange(localFilters);
+    onClose();
   };
 
-  // Toggle período seleccionado
-  const togglePeriodo = (periodoId: string) => {
-    const newPeriodoIds = filters.periodoIds.includes(periodoId)
-      ? filters.periodoIds.filter(id => id !== periodoId)
-      : [...filters.periodoIds, periodoId];
-    
-    handleFilterChange('periodoIds', newPeriodoIds);
-  };
-
-  // Seleccionar/deseleccionar todas las EPS
-  const toggleAllEPS = () => {
-    if (filters.epsIds.length === epsOptions.length) {
-      handleFilterChange('epsIds', []);
-    } else {
-      handleFilterChange('epsIds', epsOptions.map(eps => eps.id));
-    }
-  };
-
-  // Seleccionar últimos 6 meses
-  const selectLast6Months = () => {
-    const last6 = periodoOptions.slice(0, 6).map(p => p.id);
-    handleFilterChange('periodoIds', last6);
-  };
-
-  // Limpiar filtros
-  const clearFilters = () => {
-    onFiltersChange({
-      epsIds: [],
-      ipsIds: [],
-      periodoIds: [],
-      fechaInicio: '',
-      fechaFin: '',
+  const handleResetFilters = () => {
+    const resetFilters = {
       tipoAnalisis: 'ambos'
-    });
+    };
+    setLocalFilters(resetFilters);
+    onFiltersChange(resetFilters);
   };
 
-  // Filtros rápidos
-  const aplicarFiltroRapido = (tipo: string) => {
-    switch (tipo) {
-      case 'top-eps':
-        const topEPS = epsOptions.slice(0, 5).map(eps => eps.id);
-        handleFilterChange('epsIds', topEPS);
-        break;
-      case 'ultimo-trimestre':
-        const ultimoTrimestre = periodoOptions.slice(0, 3).map(p => p.id);
-        handleFilterChange('periodoIds', ultimoTrimestre);
-        break;
-      case 'ultimo-semestre':
-        selectLast6Months();
-        break;
-      case 'año-actual':
-        const yearActual = periodoOptions.filter(p => p.year === 2025).map(p => p.id);
-        handleFilterChange('periodoIds', yearActual);
-        break;
+  const filterSections = [
+    {
+      id: 'tipo',
+      title: 'Tipo de Análisis',
+      icon: FunnelIcon,
+      content: (
+        <div className="space-y-3">
+          {[
+            { value: 'cartera', label: 'Solo Cartera', color: 'bg-orange-100 text-orange-800' },
+            { value: 'flujo', label: 'Solo Flujo', color: 'bg-blue-100 text-blue-800' },
+            { value: 'ambos', label: 'Cartera y Flujo', color: 'bg-purple-100 text-purple-800' }
+          ].map((option) => (
+            <label key={option.value} className="flex items-center space-x-3 cursor-pointer">
+              <input
+                type="radio"
+                name="tipoAnalisis"
+                value={option.value}
+                checked={localFilters.tipoAnalisis === option.value}
+                onChange={(e) => handleLocalFilterChange('tipoAnalisis', e.target.value)}
+                className="w-4 h-4 text-primary-600 focus:ring-primary-500"
+              />
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${option.color}`}>
+                {option.label}
+              </span>
+            </label>
+          ))}
+        </div>
+      )
+    },
+    {
+      id: 'eps',
+      title: 'Entidades Promotoras de Salud',
+      icon: BuildingLibraryIcon,
+      content: (
+        <div className="space-y-2 max-h-48 overflow-y-auto">
+          <div className="flex items-center space-x-2 mb-3">
+            <button
+              onClick={() => handleLocalFilterChange('epsIds', epsList.map(eps => eps.id))}
+              className="text-xs text-primary-600 hover:text-primary-800"
+            >
+              Seleccionar Todas
+            </button>
+            <span className="text-gray-300">|</span>
+            <button
+              onClick={() => handleLocalFilterChange('epsIds', [])}
+              className="text-xs text-gray-600 hover:text-gray-800"
+            >
+              Limpiar
+            </button>
+          </div>
+          {epsList.map((eps) => (
+            <label key={eps.id} className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+              <input
+                type="checkbox"
+                checked={localFilters.epsIds?.includes(eps.id) || false}
+                onChange={(e) => {
+                  const currentIds = localFilters.epsIds || [];
+                  const newIds = e.target.checked
+                    ? [...currentIds, eps.id]
+                    : currentIds.filter((id: string) => id !== eps.id);
+                  handleLocalFilterChange('epsIds', newIds);
+                }}
+                className="w-4 h-4 text-primary-600 focus:ring-primary-500 rounded"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-gray-900 truncate">{eps.nombre}</div>
+                <div className="text-xs text-gray-500">{eps.codigo}</div>
+              </div>
+            </label>
+          ))}
+        </div>
+      )
+    },
+    {
+      id: 'ips',
+      title: 'Instituciones Prestadoras de Servicios',
+      icon: UsersIcon,
+      content: (
+        <div className="space-y-2 max-h-48 overflow-y-auto">
+          <div className="flex items-center space-x-2 mb-3">
+            <button
+              onClick={() => handleLocalFilterChange('ipsIds', ipsList.map(ips => ips.id))}
+              className="text-xs text-primary-600 hover:text-primary-800"
+            >
+              Seleccionar Todas
+            </button>
+            <span className="text-gray-300">|</span>
+            <button
+              onClick={() => handleLocalFilterChange('ipsIds', [])}
+              className="text-xs text-gray-600 hover:text-gray-800"
+            >
+              Limpiar
+            </button>
+          </div>
+          {ipsList.map((ips) => (
+            <label key={ips.id} className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+              <input
+                type="checkbox"
+                checked={localFilters.ipsIds?.includes(ips.id) || false}
+                onChange={(e) => {
+                  const currentIds = localFilters.ipsIds || [];
+                  const newIds = e.target.checked
+                    ? [...currentIds, ips.id]
+                    : currentIds.filter((id: string) => id !== ips.id);
+                  handleLocalFilterChange('ipsIds', newIds);
+                }}
+                className="w-4 h-4 text-primary-600 focus:ring-primary-500 rounded"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-gray-900 truncate">{ips.nombre}</div>
+                <div className="text-xs text-gray-500">{ips.codigo}</div>
+              </div>
+            </label>
+          ))}
+        </div>
+      )
+    },
+    {
+      id: 'periodos',
+      title: 'Períodos',
+      icon: CalendarDaysIcon,
+      content: (
+        <div className="space-y-2 max-h-48 overflow-y-auto">
+          <div className="flex items-center space-x-2 mb-3">
+            <button
+              onClick={() => handleLocalFilterChange('periodoIds', periodosList.slice(0, 6).map(p => p.id))}
+              className="text-xs text-primary-600 hover:text-primary-800"
+            >
+              Últimos 6 meses
+            </button>
+            <span className="text-gray-300">|</span>
+            <button
+              onClick={() => handleLocalFilterChange('periodoIds', [])}
+              className="text-xs text-gray-600 hover:text-gray-800"
+            >
+              Limpiar
+            </button>
+          </div>
+          {periodosList.map((periodo) => (
+            <label key={periodo.id} className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+              <input
+                type="checkbox"
+                checked={localFilters.periodoIds?.includes(periodo.id) || false}
+                onChange={(e) => {
+                  const currentIds = localFilters.periodoIds || [];
+                  const newIds = e.target.checked
+                    ? [...currentIds, periodo.id]
+                    : currentIds.filter((id: string) => id !== periodo.id);
+                  handleLocalFilterChange('periodoIds', newIds);
+                }}
+                className="w-4 h-4 text-primary-600 focus:ring-primary-500 rounded"
+              />
+              <div className="flex-1">
+                <div className="text-sm font-medium text-gray-900">
+                  {periodo.nombre} {periodo.year}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {periodo.activo ? 'Activo' : 'Inactivo'}
+                </div>
+              </div>
+            </label>
+          ))}
+        </div>
+      )
     }
-  };
+  ];
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-      {/* Header del panel */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
-        <div className="flex items-center space-x-3">
-          <FunnelIcon className="w-5 h-5 text-blue-500" />
-          <h3 className="font-semibold text-gray-900">Filtros de Análisis</h3>
-          {(filters.epsIds.length > 0 || filters.periodoIds.length > 0) && (
-            <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-              {filters.epsIds.length + filters.periodoIds.length} aplicados
-            </span>
-          )}
-        </div>
-        
-        <div className="flex items-center space-x-2">
-          {(filters.epsIds.length > 0 || filters.periodoIds.length > 0) && (
-            <button
-              onClick={clearFilters}
-              className="text-sm text-gray-500 hover:text-gray-700 flex items-center space-x-1"
-            >
-              <XMarkIcon className="w-4 h-4" />
-              <span>Limpiar</span>
-            </button>
-          )}
-          
+    <div className="bg-white border-t border-gray-200">
+      <div className="px-6 py-4">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-3">
+            <FunnelIcon className="w-6 h-6 text-primary-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Filtros Avanzados</h3>
+          </div>
           <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="flex items-center space-x-2 px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            <span>{isExpanded ? 'Ocultar' : 'Mostrar'} Filtros</span>
-            <motion.div
-              animate={{ rotate: isExpanded ? 180 : 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <FunnelIcon className="w-4 h-4" />
-            </motion.div>
+            <XMarkIcon className="w-5 h-5 text-gray-500" />
           </button>
         </div>
-      </div>
 
-      {/* Panel expandible */}
-      <AnimatePresence>
-        {isExpanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="overflow-hidden"
-          >
-            <div className="p-6 space-y-6">
-              
-              {/* Filtros rápidos */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Filtros Rápidos
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => aplicarFiltroRapido('top-eps')}
-                    className="px-3 py-1 text-sm bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-md transition-colors"
-                  >
-                    Top 5 EPS
-                  </button>
-                  <button
-                    onClick={() => aplicarFiltroRapido('ultimo-trimestre')}
-                    className="px-3 py-1 text-sm bg-green-100 hover:bg-green-200 text-green-800 rounded-md transition-colors"
-                  >
-                    Último Trimestre
-                  </button>
-                  <button
-                    onClick={() => aplicarFiltroRapido('ultimo-semestre')}
-                    className="px-3 py-1 text-sm bg-purple-100 hover:bg-purple-200 text-purple-800 rounded-md transition-colors"
-                  >
-                    Último Semestre
-                  </button>
-                  <button
-                    onClick={() => aplicarFiltroRapido('año-actual')}
-                    className="px-3 py-1 text-sm bg-orange-100 hover:bg-orange-200 text-orange-800 rounded-md transition-colors"
-                  >
-                    Año 2025
-                  </button>
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <ArrowPathIcon className="w-6 h-6 text-primary-600 animate-spin mr-3" />
+            <span className="text-gray-600">Cargando opciones de filtro...</span>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {filterSections.map((section) => (
+              <motion.div
+                key={section.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="border border-gray-200 rounded-lg p-4"
+              >
+                <div className="flex items-center space-x-2 mb-4">
+                  <section.icon className="w-5 h-5 text-primary-600" />
+                  <h4 className="font-medium text-gray-900">{section.title}</h4>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                
-                {/* Selección de EPS */}
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <label className="block text-sm font-medium text-gray-700">
-                      <BuildingLibraryIcon className="w-4 h-4 inline mr-1" />
-                      EPS Seleccionadas ({filters.epsIds.length}/{epsOptions.length})
-                    </label>
-                    <button
-                      onClick={toggleAllEPS}
-                      className="text-xs text-blue-600 hover:text-blue-800"
-                    >
-                      {filters.epsIds.length === epsOptions.length ? 'Deseleccionar todas' : 'Seleccionar todas'}
-                    </button>
-                  </div>
-                  
-                  <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg">
-                    {loadingOptions ? (
-                      <div className="p-4 text-center text-gray-500">
-                        <ArrowPathIcon className="w-5 h-5 animate-spin mx-auto mb-2" />
-                        Cargando EPS...
-                      </div>
-                    ) : (
-                      <div className="p-2 space-y-1">
-                        {epsOptions.map((eps) => (
-                          <label
-                            key={eps.id}
-                            className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded cursor-pointer"
-                          >
-                            <div className="relative">
-                              <input
-                                type="checkbox"
-                                checked={filters.epsIds.includes(eps.id)}
-                                onChange={() => toggleEPS(eps.id)}
-                                className="sr-only"
-                              />
-                              <div className={`w-4 h-4 border-2 rounded flex items-center justify-center transition-colors ${
-                                filters.epsIds.includes(eps.id)
-                                  ? 'bg-blue-500 border-blue-500'
-                                  : 'border-gray-300 hover:border-gray-400'
-                              }`}>
-                                {filters.epsIds.includes(eps.id) && (
-                                  <CheckIcon className="w-3 h-3 text-white" />
-                                )}
-                              </div>
-                            </div>
-                            <span className="text-sm text-gray-900">{eps.nombre}</span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Selección de Períodos */}
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <label className="block text-sm font-medium text-gray-700">
-                      <CalendarDaysIcon className="w-4 h-4 inline mr-1" />
-                      Períodos Seleccionados ({filters.periodoIds.length}/{periodoOptions.length})
-                    </label>
-                    <button
-                      onClick={selectLast6Months}
-                      className="text-xs text-blue-600 hover:text-blue-800"
-                    >
-                      Últimos 6 meses
-                    </button>
-                  </div>
-                  
-                  <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg">
-                    {loadingOptions ? (
-                      <div className="p-4 text-center text-gray-500">
-                        <ArrowPathIcon className="w-5 h-5 animate-spin mx-auto mb-2" />
-                        Cargando períodos...
-                      </div>
-                    ) : (
-                      <div className="p-2 space-y-1">
-                        {periodoOptions.map((periodo) => (
-                          <label
-                            key={periodo.id}
-                            className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded cursor-pointer"
-                          >
-                            <div className="relative">
-                              <input
-                                type="checkbox"
-                                checked={filters.periodoIds.includes(periodo.id)}
-                                onChange={() => togglePeriodo(periodo.id)}
-                                className="sr-only"
-                              />
-                              <div className={`w-4 h-4 border-2 rounded flex items-center justify-center transition-colors ${
-                                filters.periodoIds.includes(periodo.id)
-                                  ? 'bg-green-500 border-green-500'
-                                  : 'border-gray-300 hover:border-gray-400'
-                              }`}>
-                                {filters.periodoIds.includes(periodo.id) && (
-                                  <CheckIcon className="w-3 h-3 text-white" />
-                                )}
-                              </div>
-                            </div>
-                            <span className="text-sm text-gray-900">{periodo.nombre}</span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Tipo de Análisis */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Tipo de Análisis
-                </label>
-                <div className="flex space-x-4">
-                  {[
-                    { value: 'cartera', label: 'Solo Cartera' },
-                    { value: 'flujo', label: 'Solo Flujo' },
-                    { value: 'ambos', label: 'Cartera y Flujo' }
-                  ].map((option) => (
-                    <label key={option.value} className="flex items-center space-x-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="tipoAnalisis"
-                        value={option.value}
-                        checked={filters.tipoAnalisis === option.value}
-                        onChange={(e) => handleFilterChange('tipoAnalisis', e.target.value)}
-                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-gray-900">{option.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Resumen de filtros aplicados */}
-              {(filters.epsIds.length > 0 || filters.periodoIds.length > 0) && (
-                <div className="bg-blue-50 rounded-lg p-4">
-                  <h4 className="text-sm font-medium text-blue-900 mb-2">Filtros Aplicados:</h4>
-                  <div className="space-y-1 text-sm text-blue-800">
-                    {filters.epsIds.length > 0 && (
-                      <p>• {filters.epsIds.length} EPS seleccionadas</p>
-                    )}
-                    {filters.periodoIds.length > 0 && (
-                      <p>• {filters.periodoIds.length} períodos seleccionados</p>
-                    )}
-                    <p>• Análisis: {filters.tipoAnalisis === 'ambos' ? 'Cartera y Flujo' : 
-                        filters.tipoAnalisis === 'cartera' ? 'Solo Cartera' : 'Solo Flujo'}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </motion.div>
+                {section.content}
+              </motion.div>
+            ))}
+          </div>
         )}
-      </AnimatePresence>
+
+        {/* Botones de Acción */}
+        <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-200">
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={handleResetFilters}
+              className="btn-secondary flex items-center space-x-2"
+            >
+              <ArrowPathIcon className="w-4 h-4" />
+              <span>Resetear</span>
+            </button>
+          </div>
+          
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleApplyFilters}
+              className="btn-primary"
+            >
+              Aplicar Filtros
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

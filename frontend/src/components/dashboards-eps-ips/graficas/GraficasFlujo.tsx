@@ -54,41 +54,32 @@ export const GraficasFlujo: React.FC<GraficasFlujoProps> = ({ filters, loading }
   }, [filters]);
 
   const loadFlujoData = async () => {
-  setLoadingData(true);
-  try {
-    console.log('🔄 Cargando datos de flujo con filtros:', filters);
+    setLoadingData(true);
+    try {
+      console.log('🔄 Cargando datos de flujo...');
+      
+      const [analisisFlujo, tendencias] = await Promise.all([
+        dashboardsEpsIpsAPI.getAnalisisFlujo(filters),
+        dashboardsEpsIpsAPI.getTendenciasYProyecciones(filters)
+      ]);
 
-    const [flujoResponse, tendenciasResponse] = await Promise.all([
-      dashboardsEpsIpsAPI.getAnalisisFlujo(filters),
-      dashboardsEpsIpsAPI.getTendenciasYProyecciones(filters)
-    ]);
-
-    // Procesar datos de flujo
-    let flujoArray = [];
-    if (Array.isArray(flujoResponse)) {
-      flujoArray = flujoResponse;
-    } else if (flujoResponse && Array.isArray(flujoResponse.data)) {
-      flujoArray = flujoResponse.data;
-    } else if (flujoResponse && flujoResponse.flujoData) {
-      flujoArray = Array.isArray(flujoResponse.flujoData) ? flujoResponse.flujoData : [];
+      console.log('📊 Datos de flujo recibidos:', analisisFlujo);
+      
+      setFlujoData(analisisFlujo);
+      
+      // Procesar datos para gráficas
+      if (analisisFlujo) {
+        procesarDatosCumplimiento(analisisFlujo);
+        procesarDatosDistribucion(analisisFlujo);
+        procesarTendencias(tendencias);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error loading flujo data:', error);
+    } finally {
+      setLoadingData(false);
     }
-
-    // Aplicar filtros adicionales
-    flujoArray = aplicarFiltrosFlujo(flujoArray, filters);
-
-    setFlujoData(flujoArray);
-    setTendenciaData(tendenciasResponse);
-    
-    // Procesar distribución EPS para flujo con filtros aplicados
-    procesarDistribucion(flujoArray);
-    
-  } catch (error) {
-    console.error('❌ Error loading flujo data:', error);
-    setFlujoData([]);
-  } finally {
-    setLoadingData(false);
-  }
-};
+  };
 
   const procesarDatosCumplimiento = (data: any) => {
     console.log('📈 Procesando datos de cumplimiento...');
@@ -110,142 +101,32 @@ export const GraficasFlujo: React.FC<GraficasFlujoProps> = ({ filters, loading }
       setCumplimientoData(cumplimiento);
     }
   };
-  const getNombreMes = (numeroMes: number): string => {
-  const meses = [
-    'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
-  ];
-  return meses[numeroMes - 1] || '';
-};
 
-  const procesarDistribucion = (data: any[]) => {
-  console.log('📊 Procesando distribución de flujo con filtros...');
-  
-  if (data && data.length > 0) {
-    // Agrupar por EPS y aplicar filtros
-    const epsGrouped = data.reduce((acc: any, item: any) => {
-      const epsNombre = item.epsNombre || item.eps || 'EPS Sin Nombre';
-      
-      if (!acc[epsNombre]) {
-        acc[epsNombre] = {
-          nombre: epsNombre,
-          valor: 0,
-          facturado: 0,
-          reconocido: 0,
-          pagado: 0,
-          cumplimiento: 0,
-          count: 0
-        };
-      }
-      
-      acc[epsNombre].facturado += item.valorFacturado || 0;
-      acc[epsNombre].reconocido += item.reconocido || 0;
-      acc[epsNombre].pagado += item.valorPagado || 0;
-      acc[epsNombre].count += 1;
-      
-      return acc;
-    }, {});
-
-    // Calcular métricas y distribución
-    const epsArray = Object.values(epsGrouped).map((eps: any) => {
-      const cumplimiento = eps.reconocido > 0 ? (eps.pagado / eps.reconocido) * 100 : 0;
-      return {
-        ...eps,
-        valor: eps.facturado,
-        cumplimiento: Math.min(100, Math.max(0, cumplimiento))
-      };
-    });
-
-    const totalFacturado = epsArray.reduce((sum: number, eps: any) => sum + eps.valor, 0);
+  const procesarDatosDistribucion = (data: any) => {
+    console.log('🎯 Procesando distribución por EPS...');
     
-    const distribucion = epsArray
-      .map((eps: any) => ({
-        nombre: eps.nombre,
-        valor: eps.valor,
-        porcentaje: totalFacturado > 0 ? (eps.valor / totalFacturado) * 100 : 0,
-        cumplimiento: eps.cumplimiento,
-        color: `hsl(${Math.random() * 360}, 70%, 60%)`
-      }))
-      .sort((a, b) => b.valor - a.valor)
-      .slice(0, 8);
-
-    setDistribuccionData(distribucion);
-  } else {
-    // Datos de fallback filtrados por EPS seleccionadas
-    const epsNombres = ['NUEVA EPS', 'COMPENSAR', 'FAMISANAR', 'SANITAS', 'SURA', 'COOSALUD', 'SALUD TOTAL', 'MUTUALSER'];
-    
-    let epsParaMostrar = epsNombres;
-    
-    // Aplicar filtro de EPS si hay selecciones específicas
-    if (filters.epsIds && filters.epsIds.length > 0) {
-      epsParaMostrar = epsNombres.filter(nombre => 
-        filters.epsIds.some(epsId => 
-          nombre.toLowerCase().includes(epsId.toLowerCase()) ||
-          epsId.toLowerCase().includes(nombre.toLowerCase())
-        )
-      );
+    if (data.distribuccionPorEPS && Array.isArray(data.distribuccionPorEPS)) {
+      const distribucion = data.distribuccionPorEPS.map((item: any, index: number) => ({
+        nombre: item.nombre,
+        valor: item.valor,
+        porcentaje: item.porcentaje,
+        cumplimiento: item.cumplimiento || 85 + Math.random() * 10,
+        color: item.color || `hsl(${index * 45}, 70%, 60%)`
+      }));
+      setDistribuccionData(distribucion);
+    } else {
+      // Fallback con EPS colombianas
+      const epsNombres = ['NUEVA EPS', 'COMPENSAR', 'FAMISANAR', 'SANITAS', 'SURA', 'COOSALUD', 'SALUD TOTAL', 'MUTUALSER'];
+      const distribucion = epsNombres.map((nombre, index) => ({
+        nombre,
+        valor: (25 - index * 2) * 1000000000, // Valores decrecientes
+        porcentaje: 25 - index * 2.5, // Porcentajes decrecientes
+        cumplimiento: 80 + Math.random() * 15, // 80-95%
+        color: `hsl(${index * 45}, 70%, 60%)`
+      }));
+      setDistribuccionData(distribucion);
     }
-    
-    const distribucion = epsParaMostrar.map((nombre, index) => ({
-      nombre,
-      valor: (25 - index * 2) * 1000000000,
-      porcentaje: Math.max(5, 25 - index * 2.5),
-      cumplimiento: 75 + Math.random() * 20,
-      color: `hsl(${index * 45}, 70%, 60%)`
-    }));
-    
-    setDistribuccionData(distribucion);
-  }
-};
-  const aplicarFiltrosFlujo = (data: any[], filters: DashboardFilters) => {
-  if (!data || !Array.isArray(data)) return [];
-  
-  let filteredData = [...data];
-  
-  console.log('🔄 Aplicando filtros a datos de flujo:', {
-    dataOriginal: data.length,
-    filtrosEPS: filters.epsIds?.length || 0,
-    filtrosPeriodos: filters.periodoIds?.length || 0
-  });
-  
-  // Filtrar por EPS seleccionadas
-  if (filters.epsIds && filters.epsIds.length > 0) {
-    filteredData = filteredData.filter(item => {
-      if (item.epsId) return filters.epsIds.includes(item.epsId);
-      if (item.epsNombre) {
-        return filters.epsIds.some(epsId => {
-          return item.epsNombre.toLowerCase().includes(epsId.toLowerCase()) ||
-                 epsId.toLowerCase().includes(item.epsNombre.toLowerCase());
-        });
-      }
-      return true;
-    });
-  }
-  
-  // Filtrar por períodos seleccionados
-  if (filters.periodoIds && filters.periodoIds.length > 0) {
-    filteredData = filteredData.filter(item => {
-      if (item.periodoId) return filters.periodoIds.includes(item.periodoId);
-      if (item.periodo || item.periodoNombre) {
-        const periodo = item.periodo || item.periodoNombre;
-        return filters.periodoIds.some(periodoId => {
-          const [year, mes] = periodoId.split('-');
-          return periodo.includes(year) && (
-            periodo.toLowerCase().includes(getNombreMes(parseInt(mes)).toLowerCase())
-          );
-        });
-      }
-      return true;
-    });
-  }
-  
-  console.log('✅ Datos de flujo filtrados:', {
-    original: data.length,
-    filtrado: filteredData.length
-  });
-  
-  return filteredData;
-};
+  };
 
   const procesarTendencias = (data: any) => {
     console.log('📊 Procesando tendencias...');

@@ -60,87 +60,42 @@ export const GraficasCartera: React.FC<GraficasCarteraProps> = ({ filters, loadi
     loadCarteraData();
   }, [filters]);
 
-  const aplicarFiltros = (data: any[], filters: DashboardFilters) => {
-  if (!data || !Array.isArray(data)) return [];
-  
-  let filteredData = [...data];
-  
-  // Filtrar por EPS seleccionadas
-  if (filters.epsIds && filters.epsIds.length > 0) {
-    filteredData = filteredData.filter(item => {
-      if (item.epsId) return filters.epsIds.includes(item.epsId);
-      if (item.epsNombre) {
-        // Buscar por nombre de EPS
-        const epsEncontrada = filters.epsIds.some(epsId => {
-          const epsOption = epsOptions.find(eps => eps.id === epsId);
-          return epsOption && item.epsNombre.includes(epsOption.nombre);
-        });
-        return epsEncontrada;
-      }
-      return true;
-    });
-  }
-  
-  // Filtrar por períodos seleccionados
-  if (filters.periodoIds && filters.periodoIds.length > 0) {
-    filteredData = filteredData.filter(item => {
-      if (item.periodoId) return filters.periodoIds.includes(item.periodoId);
-      if (item.periodo) {
-        return filters.periodoIds.some(periodoId => {
-          const [year, mes] = periodoId.split('-');
-          return item.periodo.includes(year) || item.periodo.includes(mes);
-        });
-      }
-      return true;
-    });
-  }
-  
-  console.log('🔍 Datos filtrados:', {
-    original: data.length,
-    filtrado: filteredData.length,
-    filtros: filters
-  });
-  
-  return filteredData;
-};
-
-
   const loadCarteraData = async () => {
-  setLoadingData(true);
-  try {
-    console.log('🔄 Cargando datos de cartera con filtros:', filters);
+    setLoadingData(true);
+    try {
+      console.log('🔄 Cargando datos de cartera...');
 
-    const [cartera, tendencias, metricas] = await Promise.all([
-      dashboardsEpsIpsAPI.getCarteraTrazabilidad(filters), // Pasar filtros
-      dashboardsEpsIpsAPI.getTendenciasYProyecciones(filters),
-      dashboardsEpsIpsAPI.getMetricasComparativas(filters)
-    ]);
+      const [cartera, tendencias, metricas] = await Promise.all([
+        dashboardsEpsIpsAPI.getCarteraTrazabilidad(filters),
+        dashboardsEpsIpsAPI.getTendenciasYProyecciones(filters),
+        dashboardsEpsIpsAPI.getMetricasComparativas(filters)
+      ]);
 
-    // Aplicar filtros adicionales en el frontend
-    let carteraArray = Array.isArray(cartera) ? cartera : 
-                     cartera?.data ? cartera.data : 
-                     cartera?.trazabilidad ? cartera.trazabilidad : [];
+      console.log('📊 Datos de cartera recibidos:', { cartera, tendencias, metricas });
 
-    // Aplicar filtros de EPS y período
-    carteraArray = aplicarFiltros(carteraArray, filters);
+      // Validar que cartera sea un array
+      let carteraArray = [];
+      if (Array.isArray(cartera)) {
+        carteraArray = cartera;
+      } else if (cartera && Array.isArray(cartera.data)) {
+        carteraArray = cartera.data;
+      } else if (cartera && Array.isArray(cartera.trazabilidad)) {
+        carteraArray = cartera.trazabilidad;
+      } else {
+        console.warn('⚠️ carteraData no es un array válido:', cartera);
+        carteraArray = [];
+      }
 
-    setCarteraData(carteraArray);
-    setTendenciasData(tendencias);
-    setMetricasComparativas(metricas);
-    
-    console.log('✅ Datos cargados y filtrados:', {
-      carteraItems: carteraArray.length,
-      epsSeleccionadas: filters.epsIds.length,
-      periodosSeleccionados: filters.periodoIds.length
-    });
-    
-  } catch (error) {
-    console.error('❌ Error loading cartera data:', error);
-    setCarteraData([]);
-  } finally {
-    setLoadingData(false);
-  }
-};
+      setCarteraData(carteraArray);
+      setTendenciasData(tendencias);
+      setMetricasComparativas(metricas);
+    } catch (error) {
+      console.error('❌ Error loading cartera data:', error);
+      setCarteraData([]);
+    } finally {
+      setLoadingData(false);
+    }
+  };
 
   // Validar que carteraData sea un array
   const safeCarteraData = Array.isArray(carteraData) ? carteraData : [];
@@ -215,71 +170,34 @@ export const GraficasCartera: React.FC<GraficasCarteraProps> = ({ filters, loadi
 
   // ✅ CORRECCIÓN PRINCIPAL: Datos para distribución por EPS
   const distribucionEPS = React.useMemo(() => {
-  console.log('🔍 Calculando distribución EPS con filtros aplicados...');
-  console.log('Filtros activos:', filters);
+  console.log('🔍 Calculando distribución EPS...');
   console.log('safeCarteraData length:', safeCarteraData.length);
 
-  // Si no hay datos filtrados, usar datos de fallback pero respetando filtros de EPS
   if (!safeCarteraData.length) {
-    console.log('⚠️ No hay datos de cartera, aplicando filtros a datos de fallback...');
+    console.log('⚠️ No hay datos de cartera, usando datos de fallback...');
     
+    // Datos de fallback para EPS colombianas
     const fallbackData = [
-      { nombre: 'NUEVA EPS', valor: 45000000000, participacion: 22.5, id: 'eps-1' },
-      { nombre: 'COMPENSAR', valor: 38000000000, participacion: 19.0, id: 'eps-2' },
-      { nombre: 'FAMISANAR', valor: 32000000000, participacion: 16.0, id: 'eps-3' },
-      { nombre: 'SANITAS', valor: 28000000000, participacion: 14.0, id: 'eps-4' },
-      { nombre: 'SURA', valor: 24000000000, participacion: 12.0, id: 'eps-5' },
-      { nombre: 'COOSALUD', valor: 18000000000, participacion: 9.0, id: 'eps-6' },
-      { nombre: 'SALUD TOTAL', valor: 12000000000, participacion: 6.0, id: 'eps-7' },
-      { nombre: 'MUTUALSER', valor: 8000000000, participacion: 4.0, id: 'eps-8' }
+      { nombre: 'NUEVA EPS', valor: 45000000000, participacion: 22.5 },
+      { nombre: 'COMPENSAR', valor: 38000000000, participacion: 19.0 },
+      { nombre: 'FAMISANAR', valor: 32000000000, participacion: 16.0 },
+      { nombre: 'SANITAS', valor: 28000000000, participacion: 14.0 },
+      { nombre: 'SURA', valor: 24000000000, participacion: 12.0 },
+      { nombre: 'COOSALUD', valor: 18000000000, participacion: 9.0 },
+      { nombre: 'SALUD TOTAL', valor: 12000000000, participacion: 6.0 },
+      { nombre: 'MUTUALSER', valor: 8000000000, participacion: 4.0 }
     ];
-    
-    // Aplicar filtro de EPS si hay selecciones específicas
-    if (filters.epsIds && filters.epsIds.length > 0) {
-      const epsNombresSeleccionadas = filters.epsIds.map(epsId => {
-        // Buscar el nombre de EPS por ID o usar el ID si es el nombre
-        const epsFound = fallbackData.find(eps => eps.id === epsId);
-        return epsFound ? epsFound.nombre : epsId.replace('eps-', '').toUpperCase();
-      });
-      
-      const filteredFallback = fallbackData.filter(eps => 
-        epsNombresSeleccionadas.some(nombre => eps.nombre.includes(nombre))
-      );
-      
-      if (filteredFallback.length > 0) {
-        // Recalcular participaciones para los datos filtrados
-        const totalFiltrado = filteredFallback.reduce((sum, eps) => sum + eps.valor, 0);
-        return filteredFallback.map(eps => ({
-          ...eps,
-          participacion: totalFiltrado > 0 ? (eps.valor / totalFiltrado) * 100 : 0
-        }));
-      }
-    }
     
     return fallbackData;
   }
 
-  // Procesar datos reales con filtros aplicados
+  // Agrupar datos por EPS
   const epsGrouped = safeCarteraData.reduce((acc: any, item: any) => {
     if (!item.epsNombre || typeof item.valorActual !== 'number') {
       return acc;
     }
 
     const epsName = item.epsNombre.trim();
-    
-    // Aplicar filtro de EPS si está definido
-    if (filters.epsIds && filters.epsIds.length > 0) {
-      const epsSeleccionada = filters.epsIds.some(epsId => {
-        // Verificar si el epsId coincide con el nombre o contiene parte del nombre
-        return epsName.toLowerCase().includes(epsId.toLowerCase()) ||
-               epsId.toLowerCase().includes(epsName.toLowerCase()) ||
-               epsId === item.epsId;
-      });
-      
-      if (!epsSeleccionada) {
-        return acc; // Filtrar esta EPS
-      }
-    }
     
     if (!acc[epsName]) {
       acc[epsName] = {
@@ -309,15 +227,11 @@ export const GraficasCartera: React.FC<GraficasCarteraProps> = ({ filters, loadi
     .sort((a, b) => b.valor - a.valor)
     .slice(0, 8); // Limitar a las 8 EPS principales
 
-  console.log('📊 Distribución EPS calculada con filtros:', {
-    result: result.length,
-    total: total,
-    filtrosEPS: filters.epsIds?.length || 0,
-    filtrosPeriodos: filters.periodoIds?.length || 0
-  });
+  console.log('📊 Distribución EPS calculada:', result);
+  console.log('Total valor:', total);
   
   return result;
-}, [safeCarteraData, filters]);
+}, [safeCarteraData]);
 
 // ✅ CORRECCIÓN: Datos para TreeMap con validación mejorada
 const treeMapData = React.useMemo(() => {
