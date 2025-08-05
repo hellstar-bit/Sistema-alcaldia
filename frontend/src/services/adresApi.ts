@@ -92,8 +92,25 @@ export interface AdresStats {
 
 // ✅ SERVICIOS API - COMPLETOS Y CORREGIDOS
 export const adresAPI = {
+
+  async downloadPlantilla(): Promise<Blob> {
+    try {
+      console.log('📥 AdresAPI: Descargando plantilla ADRES...');
+
+      const response = await api.get('/adres/plantilla', {
+        responseType: 'blob',
+        timeout: 30000, // 30 segundos
+      });
+
+      console.log('✅ AdresAPI: Plantilla descargada exitosamente');
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ AdresAPI: Error al descargar plantilla:', error);
+      throw error;
+    }
+  },
   // ✅ Obtener todas las EPS
-  async getAllEPS(): Promise<ApiResponse<EPS[]>> {
+  async getEPS(): Promise<ApiResponse<EPS[]>> {
     try {
       console.log('🏢 AdresAPI: Obteniendo todas las EPS...');
       const response = await api.get('/adres/eps');
@@ -106,7 +123,7 @@ export const adresAPI = {
   },
 
   // ✅ Obtener todos los períodos
-  async getAllPeriodos(): Promise<ApiResponse<Periodo[]>> {
+  async getPeriodos(): Promise<ApiResponse<Periodo[]>> {
     try {
       console.log('📅 AdresAPI: Obteniendo todos los períodos...');
       const response = await api.get('/adres/periodos');
@@ -219,9 +236,13 @@ export const adresAPI = {
   },
 
   // ✅ Subir archivo Excel
-  async uploadExcel(file: File, epsId: string, periodoId: string): Promise<ApiResponse<UploadResult>> {
+  async uploadFile(
+    file: File,
+    epsId: string,
+    periodoId: string
+  ): Promise<any> {
     try {
-      console.log('📤 AdresAPI: Subiendo archivo Excel...', {
+      console.log('🚀 AdresAPI: Iniciando upload de archivo', {
         fileName: file.name,
         fileSize: file.size,
         epsId,
@@ -233,17 +254,37 @@ export const adresAPI = {
       formData.append('epsId', epsId);
       formData.append('periodoId', periodoId);
 
-      const response = await api.post('/adres/upload-excel', formData, {
+      // ✅ CORRECCIÓN: Asegurarse de que el endpoint sea correcto
+      const response = await api.post('/adres/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        timeout: 300000, // 5 minutos de timeout para archivos grandes
       });
 
-      console.log('✅ AdresAPI: Archivo Excel subido exitosamente');
+      console.log('✅ AdresAPI: Upload completado exitosamente', {
+        processed: response.data.data?.processed || 0,
+        errors: response.data.data?.errors?.length || 0
+      });
+
       return response.data;
     } catch (error: any) {
-      console.error('❌ AdresAPI: Error al subir archivo Excel:', error);
-      throw error;
+      console.error('❌ AdresAPI: Error en upload de archivo:', error);
+      
+      // Mejorar el manejo de errores
+      if (error.response) {
+        // Error de respuesta del servidor
+        const errorMessage = error.response.data?.message || 
+                            error.response.data?.error || 
+                            `Error del servidor: ${error.response.status}`;
+        throw new Error(errorMessage);
+      } else if (error.request) {
+        // Error de red
+        throw new Error('Error de conexión: No se pudo conectar con el servidor');
+      } else {
+        // Error de configuración
+        throw new Error(error.message || 'Error desconocido al subir el archivo');
+      }
     }
   },
 
@@ -340,6 +381,64 @@ export const adresUtils = {
     return `${value.toFixed(1)}%`;
   },
 
+   
+  // ✅ CORRECCIÓN: Validar archivo Excel (CONSISTENTE CON CARTERA Y FLUJO)
+  validateExcelFile: (file: File): { isValid: boolean; error?: string } => {
+    console.log('🔍 Validando archivo ADRES:', file.name);
+    
+    // Validar que existe el archivo
+    if (!file) {
+      return { isValid: false, error: 'No se ha seleccionado ningún archivo' };
+    }
+
+    // Validar tamaño (50MB máximo)
+    const maxSize = 50 * 1024 * 1024; // 50MB en bytes
+    if (file.size > maxSize) {
+      return { 
+        isValid: false, 
+        error: `El archivo es demasiado grande. Tamaño máximo permitido: 50MB. Tamaño actual: ${(file.size / (1024 * 1024)).toFixed(1)}MB` 
+      };
+    }
+
+    // Validar extensión
+    const allowedExtensions = ['.xlsx', '.xls', '.csv'];
+    const fileName = file.name.toLowerCase();
+    const isValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
+    
+    if (!isValidExtension) {
+      return { 
+        isValid: false, 
+        error: `Formato de archivo no válido. Formatos permitidos: ${allowedExtensions.join(', ')}` 
+      };
+    }
+
+    // Validar que no esté vacío
+    if (file.size === 0) {
+      return { isValid: false, error: 'El archivo está vacío' };
+    }
+
+    console.log('✅ Archivo ADRES válido:', file.name);
+    return { isValid: true };
+  },
+
+  // ✅ NUEVA FUNCIÓN: Validar estructura de archivo (simplificada)
+  validateFileStructure: async (file: File): Promise<{ valid: boolean; error?: string }> => {
+    try {
+      console.log('🔍 Validando estructura del archivo ADRES...');
+      
+      // Por ahora, solo validar que el archivo se pueda leer
+      // La validación detallada se hará en el backend
+      return { valid: true };
+      
+    } catch (error) {
+      console.error('❌ Error al validar estructura:', error);
+      return { 
+        valid: false, 
+        error: 'No se pudo validar la estructura del archivo. Verifica que sea un archivo Excel válido.' 
+      };
+    }
+  },
+
   // ✅ Generar nombre de archivo para exportación
   generateFileName: (prefix: string, epsNombre?: string, periodoNombre?: string): string => {
     const timestamp = new Date().toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '_');
@@ -358,8 +457,11 @@ export const adresUtils = {
     return `${filename}.xlsx`;
   },
 
+  
+
   // ✅ Descargar blob como archivo
   downloadBlob: (blob: Blob, filename: string): void => {
+    console.log('📥 Descargando archivo:', filename);
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -368,52 +470,9 @@ export const adresUtils = {
     link.click();
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
+    console.log('✅ Descarga iniciada:', filename);
   },
-
-  // ✅ Validar archivo Excel
-  validateExcelFile: (file: File): { isValid: boolean; error?: string } => {
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    const allowedTypes = [
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'application/vnd.ms-excel'
-    ];
-
-    if (!allowedTypes.includes(file.type)) {
-      return {
-        isValid: false,
-        error: 'El archivo debe ser un Excel (.xlsx o .xls)'
-      };
-    }
-
-    if (file.size > maxSize) {
-      return {
-        isValid: false,
-        error: 'El archivo no debe superar los 10MB'
-      };
-    }
-
-    return { isValid: true };
-  },
-
-  // ✅ Formatear nombre de período para display
-  formatPeriodoName: (periodo: Periodo): string => {
-    return `${periodo.nombre} ${periodo.year}`;
-  },
-
-  // ✅ Obtener color para cumplimiento
-  getCumplimientoColor: (cumplimiento: number): string => {
-    if (cumplimiento >= 90) return 'text-green-600';
-    if (cumplimiento >= 70) return 'text-yellow-600';
-    return 'text-red-600';
-  },
-
-  // ✅ Obtener clases CSS para badges de cumplimiento
-  getCumplimientoBadgeClasses: (cumplimiento: number): string => {
-    if (cumplimiento >= 90) return 'bg-green-100 text-green-800';
-    if (cumplimiento >= 70) return 'bg-yellow-100 text-yellow-800';
-    return 'bg-red-100 text-red-800';
-  }
-};
+}
 
 // ✅ Exportar todo como default también para compatibilidad
 export default {

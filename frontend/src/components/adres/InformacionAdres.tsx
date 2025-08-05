@@ -138,8 +138,8 @@ export const InformacionAdres: React.FC = () => {
       
       // Cargar EPS, Períodos y Estado en paralelo - igual que cartera
       const [epsResponse, periodosResponse, statusResponse] = await Promise.all([
-        adresAPI.getAllEPS(),
-        adresAPI.getAllPeriodos(),
+        adresAPI.getEPS(),
+        adresAPI.getPeriodos(),
         adresAPI.getEPSPeriodoStatus()
       ]);
 
@@ -882,19 +882,26 @@ export const InformacionAdres: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal de carga */}
-      {showUploadModal && (
-        <ExcelUploadModal
-          onClose={() => setShowUploadModal(false)}
-          onSuccess={() => {
-            setShowUploadModal(false);
-            loadInitialData();
-            if (selectedEPS && selectedPeriodo) {
-              handleCellClick(selectedEPS, selectedPeriodo);
-            }
-          }}
-        />
-      )}
-    </div>
-  );
-};
+      {/* ✅ MODAL DE CARGA CORREGIDO */}
+        {showUploadModal && (
+          <ExcelUploadModal
+            isOpen={showUploadModal}  // ✅ AGREGAR esta prop
+            onClose={() => setShowUploadModal(false)}
+            selectedEPS={selectedEPS ? { id: selectedEPS.id, nombre: selectedEPS.nombre } : undefined}  // ✅ AGREGAR
+            selectedPeriodo={selectedPeriodo ? { 
+              id: selectedPeriodo.id, 
+              nombre: selectedPeriodo.nombre, 
+              year: selectedPeriodo.year 
+            } : undefined}  // ✅ AGREGAR
+            onUploadSuccess={() => {  // ✅ CAMBIAR de 'onSuccess' a 'onUploadSuccess'
+              setShowUploadModal(false);
+              loadInitialData();
+              if (selectedEPS && selectedPeriodo) {
+                handleCellClick(selectedEPS, selectedPeriodo);
+              }
+            }}
+                />
+              )}
+            </div>
+          );
+        };

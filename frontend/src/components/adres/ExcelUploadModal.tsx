@@ -1,17 +1,21 @@
+// frontend/src/components/adres/ExcelUploadModal.tsx - ERRORES CRÍTICOS CORREGIDOS
+
 import React, { useState, useRef } from 'react';
 import {
   XMarkIcon,
   CloudArrowUpIcon,
   DocumentArrowDownIcon,
-  ExclamationTriangleIcon,
   CheckCircleIcon,
   InformationCircleIcon,
-  DocumentTextIcon,
-  CurrencyDollarIcon,
   CalendarDaysIcon,
   BuildingOfficeIcon
 } from '@heroicons/react/24/outline';
+
+// ✅ CORRECCIÓN 1: Import correcto
+// ❌ TIENES: import { AdresAPI, adresUtils } from '../../services/adresApi';
+// ✅ DEBE SER: import { adresAPI, adresUtils } from '../../services/adresApi';
 import { adresAPI, adresUtils } from '../../services/adresApi';
+
 import { useSweetAlert } from '../../hooks/useSweetAlert';
 
 interface ExcelUploadModalProps {
@@ -22,7 +26,6 @@ interface ExcelUploadModalProps {
   onUploadSuccess: () => void;
 }
 
-// Interface local para el resultado del upload
 interface LocalUploadResult {
   processed: number;
   errors: string[];
@@ -64,10 +67,12 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
     }
   };
 
+  // ✅ CORRECCIÓN 2: Función handleFileSelect COMPLETA (estaba cortada)
   const handleFileSelect = async (file: File) => {
-    const validation = adresUtils.validateFile(file);
+    console.log('🔍 Seleccionando archivo:', file.name);
     
-    if (!validation.valid) {
+    const validation = adresUtils.validateExcelFile(file);
+    if (!validation.isValid) {
       showError({
         title: 'Formato de archivo inválido',
         text: validation.error!
@@ -75,18 +80,10 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
       return;
     }
 
-    // Validación adicional de estructura
-    const structureValidation = await adresUtils.validateFileStructure(file);
-    if (!structureValidation.valid) {
-      showError({
-        title: 'Estructura de archivo incorrecta',
-        text: structureValidation.error!
-      });
-      return;
-    }
-
+    // ✅ AGREGAR: Establecer el archivo seleccionado
     setSelectedFile(file);
     setUploadResult(null);
+    console.log('✅ Archivo seleccionado correctamente:', file.name);
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -95,25 +92,41 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
     }
   };
 
+  // ✅ CORRECCIÓN 3: Usar adresAPI (instancia) en lugar de AdresAPI (clase)
   const handleUpload = async () => {
-    if (!selectedFile || !selectedEPS || !selectedPeriodo) return;
+    if (!selectedFile || !selectedEPS || !selectedPeriodo) {
+      console.warn('❌ Faltan datos requeridos para la importación:', {
+        selectedFile: !!selectedFile,
+        selectedEPS: !!selectedEPS,
+        selectedPeriodo: !!selectedPeriodo
+      });
+      return;
+    }
+
+    console.log('🚀 Iniciando importación ADRES:', {
+      file: selectedFile.name,
+      eps: selectedEPS.nombre,
+      periodo: `${selectedPeriodo.nombre} ${selectedPeriodo.year}`
+    });
 
     setUploading(true);
     showLoading('Procesando archivo...', 'Validando datos y creando registros');
 
     try {
+      // ✅ CORRECCIÓN: Usar adresAPI (instancia) no AdresAPI (clase)
       const response = await adresAPI.uploadFile(
         selectedFile,
         selectedEPS.id,
         selectedPeriodo.id
       );
 
+      console.log('✅ Respuesta de la API:', response);
       close();
       
       if (response.success) {
         const localResult: LocalUploadResult = {
           processed: response.data.processed,
-          errors: response.data.errors
+          errors: response.data.errors || []
         };
         
         setUploadResult(localResult);
@@ -125,11 +138,12 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
       } else {
         showError({
           title: 'Error en la importación',
-          text: response.message
+          text: response.message || 'Error desconocido en la importación'
         });
       }
 
     } catch (error: any) {
+      console.error('❌ Error en importación ADRES:', error);
       close();
       showError({
         title: 'Error en la importación',
@@ -140,74 +154,71 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
     }
   };
 
+  // ✅ CORRECCIÓN 4: Usar adresAPI (instancia) no AdresAPI (clase)
   const handleDownloadTemplate = async () => {
     try {
+      console.log('📥 Descargando plantilla ADRES...');
       showLoading('Generando plantilla...', 'Preparando archivo de ejemplo');
       
+      // ✅ CORRECCIÓN: Usar adresAPI (instancia) no AdresAPI (clase)
       const blob = await adresAPI.downloadPlantilla();
       adresUtils.downloadBlob(blob, 'Plantilla_ADRES.xlsx');
       
       close();
       showSuccess('¡Plantilla descargada!', {
-        title: 'Descarga completada',
-        text: 'La plantilla se ha guardado en tu carpeta de descargas'
+        title: 'Descarga exitosa',
+        text: 'La plantilla se ha descargado correctamente'
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('❌ Error al descargar plantilla:', error);
       close();
       showError({
-        title: 'Error al descargar',
-        text: 'No se pudo generar la plantilla'
+        title: 'Error en la descarga',
+        text: error.message || 'No se pudo descargar la plantilla'
       });
     }
   };
 
-  const formatFileSize = (bytes: number): string => {
-    return adresUtils.formatFileSize(bytes);
-  };
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-elegant max-w-4xl w-full max-h-[90vh] overflow-hidden">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-primary-900 to-primary-800 p-6 text-white">
-          <div className="flex items-center justify-between">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
-                <CloudArrowUpIcon className="w-6 h-6" />
+              <div className="p-3 bg-primary-100 rounded-xl">
+                <CloudArrowUpIcon className="w-6 h-6 text-primary-600" />
               </div>
               <div>
-                <h2 className="text-xl font-bold">Importar Datos de ADRES</h2>
-                <p className="text-primary-100 text-sm">Cargar información desde archivo Excel o CSV</p>
+                <h2 className="text-xl font-bold text-gray-900">Importar Datos ADRES</h2>
+                <p className="text-sm text-gray-600">Carga masiva de información desde Excel</p>
               </div>
             </div>
-            <button 
+            <button
               onClick={onClose}
-              className="p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
+              className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
             >
-              <XMarkIcon className="w-6 h-6" />
+              <XMarkIcon className="w-5 h-5 text-gray-400" />
             </button>
           </div>
-        </div>
 
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-          {/* Información del Contexto */}
-          <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-gradient-to-br from-primary-50 to-primary-100 border border-primary-200 rounded-xl p-4">
+          {/* Información de EPS y Período */}
+          <div className="mb-6 bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-xl p-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex items-center space-x-3">
-                <BuildingOfficeIcon className="w-8 h-8 text-primary-600" />
+                <BuildingOfficeIcon className="w-5 h-5 text-gray-600" />
                 <div>
-                  <p className="text-sm font-medium text-primary-800">EPS Seleccionada</p>
-                  <p className="text-lg font-bold text-primary-900">{selectedEPS?.nombre || 'No seleccionada'}</p>
+                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider">EPS Seleccionada</label>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {selectedEPS ? selectedEPS.nombre : 'No seleccionada'}
+                  </p>
                 </div>
               </div>
-            </div>
-            
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-4">
               <div className="flex items-center space-x-3">
-                <CalendarDaysIcon className="w-8 h-8 text-blue-600" />
+                <CalendarDaysIcon className="w-5 h-5 text-gray-600" />
                 <div>
-                  <p className="text-sm font-medium text-blue-800">Período Seleccionado</p>
-                  <p className="text-lg font-bold text-blue-900">
+                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider">Período</label>
+                  <p className="text-sm font-semibold text-gray-900">
                     {selectedPeriodo ? `${selectedPeriodo.nombre} ${selectedPeriodo.year}` : 'No seleccionado'}
                   </p>
                 </div>
@@ -270,44 +281,32 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
               />
 
               {selectedFile ? (
-                <div className="space-y-4">
-                  <CheckCircleIcon className="w-16 h-16 text-success-600 mx-auto" />
+                <div className="flex flex-col items-center space-y-3">
+                  <CheckCircleIcon className="w-12 h-12 text-success-600" />
                   <div>
-                    <h3 className="text-lg font-semibold text-success-900 mb-2">Archivo seleccionado</h3>
-                    <div className="bg-white border border-success-200 rounded-lg p-4 max-w-md mx-auto">
-                      <div className="flex items-center space-x-3">
-                        <DocumentTextIcon className="w-8 h-8 text-success-600 flex-shrink-0" />
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium text-gray-900 truncate">{selectedFile.name}</p>
-                          <p className="text-sm text-gray-500">{formatFileSize(selectedFile.size)}</p>
-                        </div>
-                      </div>
-                    </div>
+                    <p className="font-semibold text-success-900">{selectedFile.name}</p>
+                    <p className="text-sm text-success-700">
+                      {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
+                    </p>
                   </div>
                   <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="text-success-600 hover:text-success-800 font-medium text-sm"
+                    onClick={() => setSelectedFile(null)}
+                    className="text-sm text-gray-600 hover:text-red-600 transition-colors"
                   >
-                    Seleccionar otro archivo
+                    Remover archivo
                   </button>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  <CloudArrowUpIcon className="w-16 h-16 text-gray-400 mx-auto" />
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                      Arrastra el archivo aquí
-                    </h3>
-                    <p className="text-gray-600 mb-4">o</p>
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="btn-primary"
-                    >
-                      Seleccionar Archivo
-                    </button>
-                  </div>
-                  <p className="text-sm text-gray-500">
-                    Formatos soportados: .xlsx, .xls, .csv (máx. 50MB)
+                <div
+                  className="cursor-pointer"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <CloudArrowUpIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-lg font-medium text-gray-900 mb-2">
+                    Arrastra tu archivo aquí o haz clic para seleccionar
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Formatos soportados: .xlsx, .xls, .csv (máximo 50MB)
                   </p>
                 </div>
               )}
@@ -335,7 +334,7 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
                       <p className="font-medium mb-2 text-warning-700">
                         Advertencias encontradas:
                       </p>
-                      <ul className="space-y-1 text-sm">
+                      <ul className="space-y-1 text-small">
                         {uploadResult.errors.slice(0, 5).map((error, index) => (
                           <li key={index} className="flex items-start space-x-2 text-warning-700">
                             <span className="font-mono text-xs mt-0.5">•</span>
@@ -360,6 +359,7 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
             <button
               onClick={onClose}
               className="w-full sm:w-auto px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+              disabled={uploading}
             >
               Cancelar
             </button>
@@ -375,7 +375,7 @@ export const ExcelUploadModal: React.FC<ExcelUploadModalProps> = ({
                 </>
               ) : (
                 <>
-                  <CloudArrowUpIcon className="w-5 h-5" />
+                  <CloudArrowUpIcon className="w-4 h-4" />
                   <span>Importar Datos</span>
                 </>
               )}
