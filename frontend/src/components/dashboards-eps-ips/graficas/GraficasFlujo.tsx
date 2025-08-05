@@ -1,4 +1,6 @@
 // frontend/src/components/dashboards-eps-ips/graficas/GraficasFlujo.tsx
+// ✅ CORRECCIÓN DEL ERROR: d.porcentaje is not a function
+
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -23,7 +25,7 @@ import {
   CurrencyDollarIcon,
   ArrowTrendingUpIcon,
   ArrowTrendingDownIcon,
-  ClockIcon, // Identifier expected.
+  ClockIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
@@ -67,7 +69,7 @@ export const GraficasFlujo: React.FC<GraficasFlujoProps> = ({ filters, loading }
   };
 
   const procesarDatosCumplimiento = (data: any) => {
-    // Simular datos históricos de cumplimiento (en implementación real vendría del backend)
+    // Simular datos históricos de cumplimiento
     const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'];
     const cumplimiento = meses.map((mes, index) => ({
       mes,
@@ -151,7 +153,7 @@ export const GraficasFlujo: React.FC<GraficasFlujoProps> = ({ filters, loading }
           {payload.map((entry: any, index: number) => (
             <p key={index} className="text-sm" style={{ color: entry.color }}>
               {entry.name}: {
-                entry.name.includes('Cumplimiento') || entry.name.includes('%') ? 
+                entry.name.includes('Cumplimiento') || entry.name.includes('%') ?
                   `${entry.value.toFixed(1)}%` : 
                   formatCurrency(entry.value)
               }
@@ -163,6 +165,7 @@ export const GraficasFlujo: React.FC<GraficasFlujoProps> = ({ filters, loading }
     return null;
   };
 
+  // ✅ Estados de carga
   if (loadingData || loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -213,7 +216,7 @@ export const GraficasFlujo: React.FC<GraficasFlujoProps> = ({ filters, loading }
         ))}
       </div>
 
-      {/* Indicadores de Alerta */}
+      {/* ✅ CORRECCIÓN: Indicadores de Alerta con validaciones */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -228,10 +231,12 @@ export const GraficasFlujo: React.FC<GraficasFlujoProps> = ({ filters, loading }
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-green-800">Cumplimiento Excelente</p>
-                <p className="text-xs text-green-600">EPS con `{'>'}` 90% cumplimiento</p>
+                <p className="text-xs text-green-600">EPS con {'>'} 90% cumplimiento</p>
               </div>
               <div className="text-2xl font-bold text-green-700">
-                {distribuccionData.filter(d => d.porcentaje `{'>'}`,90).length}
+                {/* ✅ CORRECCIÓN: Usar porcentaje como propiedad, no función */}
+                {Array.isArray(distribuccionData) ? 
+                  distribuccionData.filter(d => (d.porcentaje || 0) > 90).length : 0}
               </div>
             </div>
           </div>
@@ -243,7 +248,12 @@ export const GraficasFlujo: React.FC<GraficasFlujoProps> = ({ filters, loading }
                 <p className="text-xs text-yellow-600">EPS con 70-90% cumplimiento</p>
               </div>
               <div className="text-2xl font-bold text-yellow-700">
-                {distribuccionData.filter(d => d.porcentaje >= 70 && d.porcentaje <= 90).length}
+                {/* ✅ CORRECCIÓN: Usar porcentaje como propiedad, no función */}
+                {Array.isArray(distribuccionData) ? 
+                  distribuccionData.filter(d => {
+                    const porcentaje = d.porcentaje || 0;
+                    return porcentaje >= 70 && porcentaje <= 90;
+                  }).length : 0}
               </div>
             </div>
           </div>
@@ -252,10 +262,12 @@ export const GraficasFlujo: React.FC<GraficasFlujoProps> = ({ filters, loading }
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-red-800">Cumplimiento Crítico</p>
-                <p className="text-xs text-red-600">EPS con `{'>'}` 70% cumplimiento</p>
+                <p className="text-xs text-red-600">EPS con {'<'} 70% cumplimiento</p>
               </div>
               <div className="text-2xl font-bold text-red-700">
-                {distribuccionData.filter(d => d.porcentaje < 70).length}
+                {/* ✅ CORRECCIÓN: Usar porcentaje como propiedad, no función */}
+                {Array.isArray(distribuccionData) ? 
+                  distribuccionData.filter(d => (d.porcentaje || 0) < 70).length : 0}
               </div>
             </div>
           </div>
@@ -323,45 +335,49 @@ export const GraficasFlujo: React.FC<GraficasFlujoProps> = ({ filters, loading }
                   <AreaChart data={composicionData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="mes" />
-                    <YAxis tickFormatter={(value) => formatCurrency(value, true)} />
+                    <YAxis tickFormatter={(value) => `$${(value / 1000000).toFixed(0)}M`} />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend />
                     <Area
                       type="monotone"
                       dataKey="facturado"
                       stackId="1"
-                      stroke="#8884d8"
-                      fill="#8884d8"
+                      stroke="#3B82F6"
+                      fill="#3B82F6"
                       name="Facturado"
                     />
                     <Area
                       type="monotone"
                       dataKey="pagado"
-                      stackId="2"
-                      stroke="#82ca9d"
-                      fill="#82ca9d"
+                      stackId="1"
+                      stroke="#10B981"
+                      fill="#10B981"
                       name="Pagado"
                     />
                   </AreaChart>
                 </ResponsiveContainer>
               )}
 
-              {selectedChart === 'distribucion' && (
+              {selectedChart === 'distribucion' && distribuccionData.length > 0 && (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={distribuccionData}
                       cx="50%"
                       cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name}: ${((percent ?? 0) * 100).toFixed(1)}%`}
                       outerRadius={120}
+                      fill="#8884d8"
                       dataKey="valor"
-                      label={({ nombre, porcentaje }) => `${nombre} (${porcentaje.toFixed(1)}%)`}
                     >
                       {distribuccionData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
+                        <Cell key={`cell-${index}`} fill={entry.color || `hsl(${index * 45}, 70%, 60%)`} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value) => [formatCurrency(value as number), 'Pagos']} />
+                    <Tooltip 
+                      formatter={(value) => formatCurrency(value as number)}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               )}
@@ -374,22 +390,13 @@ export const GraficasFlujo: React.FC<GraficasFlujoProps> = ({ filters, loading }
                     <YAxis />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend />
-                    <Line 
-                      type="monotone" 
-                      dataKey="cumplimiento" 
-                      stroke="#3B82F6" 
+                    <Line
+                      type="monotone"
+                      dataKey="cumplimiento"
+                      stroke="#8B5CF6"
                       strokeWidth={3}
-                      name="Cumplimiento %"
-                      dot={{ fill: '#3B82F6', strokeWidth: 2, r: 6 }}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="meta" 
-                      stroke="#EF4444" 
-                      strokeWidth={2}
-                      strokeDasharray="5 5"
-                      name="Meta 92%"
-                      dot={false}
+                      dot={{ fill: '#8B5CF6', strokeWidth: 2, r: 6 }}
+                      name="Tendencia Cumplimiento %"
                     />
                   </LineChart>
                 </ResponsiveContainer>
@@ -398,6 +405,19 @@ export const GraficasFlujo: React.FC<GraficasFlujoProps> = ({ filters, loading }
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Estado sin datos */}
+      {!distribuccionData.length && !loadingData && (
+        <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+          <ExclamationTriangleIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            No hay datos de flujo disponibles
+          </h3>
+          <p className="text-gray-600">
+            Ajusta los filtros o verifica que existan datos para el período seleccionado.
+          </p>
+        </div>
+      )}
     </div>
   );
 };

@@ -341,56 +341,56 @@ export const Dashboard: React.FC = () => {
   ];
 
   const quickActions: QuickAction[] = [
-    {
-      id: 'cargar-cartera',
-      title: 'Cargar Información Cartera',
-      description: 'Subir archivo Excel con datos de cartera mensual',
-      icon: DocumentArrowUpIcon,
-      href: '/carga/cartera',
-      color: 'bg-primary-500'
-    },
-    {
-      id: 'cargar-flujo',
-      title: 'Cargar Información Flujo',
-      description: 'Subir archivo Excel con datos de flujo de caja',
-      icon: BanknotesIcon,
-      href: '/carga/flujo',
-      color: 'bg-success-500'
-    },
-    {
-      id: 'cargar-adres',
-      title: 'Cargar Información ADRES',
-      description: 'Subir archivo Excel con datos de ADRES',
-      icon: DocumentTextIcon,
-      href: '/carga/adres',
-      color: 'bg-purple-500'
-    },
-    {
-      id: 'ver-dashboards',
-      title: 'Ver Dashboards EPS',
-      description: 'Analizar datos por entidades promotoras de salud',
-      icon: ChartBarIcon,
-      href: '/dashboards/cartera/periodo',
-      color: 'bg-warning-500'
-    },
-    {
-      id: 'gestion-eps',
-      title: 'Gestión EPS/IPS',
-      description: 'Administrar entidades y sus datos maestros',
-      icon: BuildingLibraryIcon,
-      href: '/gestion/eps',
-      color: 'bg-indigo-500',
-      count: stats?.alertasPendientes.value || undefined
-    },
-    {
-      id: 'informacion-base',
-      title: 'Información Base',
-      description: 'Consultar datos maestros y configuraciones',
-      icon: DocumentTextIcon,
-      href: '/base/cartera',
-      color: 'bg-gray-500'
-    }
-  ];
+  {
+    id: 'cargar-cartera',
+    title: 'Cargar Información Cartera',
+    description: 'Subir archivo Excel con datos de cartera mensual',
+    icon: DocumentArrowUpIcon,
+    href: '/carga/cartera',
+    color: 'bg-primary-500'
+  },
+  {
+    id: 'cargar-flujo',
+    title: 'Cargar Información Flujo',
+    description: 'Subir archivo Excel con datos de flujo de caja',
+    icon: BanknotesIcon,
+    href: '/carga/flujo',
+    color: 'bg-success-500'
+  },
+  {
+    id: 'cargar-adres',
+    title: 'Cargar Información ADRES',
+    description: 'Subir archivo Excel con datos de ADRES',
+    icon: DocumentTextIcon,
+    href: '/carga/adres',
+    color: 'bg-purple-500'
+  },
+  {
+    id: 'ver-dashboards',
+    title: 'Ver Dashboards EPS/IPS', // ✅ ACTUALIZADO: Nuevo nombre
+    description: 'Analizar datos consolidados de EPS e IPS', // ✅ ACTUALIZADO: Nueva descripción
+    icon: ChartBarIcon,
+    href: '/dashboards/eps-ips', // ✅ ACTUALIZADO: Nueva ruta directa
+    color: 'bg-warning-500'
+  },
+  {
+    id: 'gestion-eps',
+    title: 'Gestión EPS/IPS',
+    description: 'Administrar entidades y sus datos maestros',
+    icon: BuildingLibraryIcon,
+    href: '/gestion/eps',
+    color: 'bg-indigo-500',
+    count: stats?.alertasPendientes.value || undefined
+  },
+  {
+    id: 'informacion-base',
+    title: 'Información Base',
+    description: 'Consultar datos maestros y configuraciones',
+    icon: DocumentTextIcon,
+    href: '/base/cartera',
+    color: 'bg-gray-500'
+  }
+];
 
   const handleNavigate = (href: string) => {
     navigate(href);
