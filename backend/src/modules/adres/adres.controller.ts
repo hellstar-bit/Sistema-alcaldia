@@ -52,7 +52,32 @@ export class AdresController {
       };
     }
   }
+  @Get('plantilla')
+  async downloadPlantilla(@Res() res: Response, @Request() req: any) {
+    console.log('📄 AdresController: GET /adres/plantilla', {
+      user: req.user?.email || 'No user',
+    });
 
+    try {
+      const buffer = await this.adresService.generatePlantillaExcel();
+      
+      res.set({
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Disposition': 'attachment; filename="Plantilla_ADRES.xlsx"',
+        'Content-Length': buffer.length,
+      });
+
+      console.log('✅ AdresController: Plantilla generada exitosamente');
+      res.send(buffer);
+    } catch (error) {
+      console.error('❌ AdresController: Error al generar plantilla:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message,
+        data: null
+      });
+    }
+  }
   // ✅ ENDPOINT PARA OBTENER TODOS LOS PERÍODOS
   @Get('periodos')
   async getAllPeriodos(@Request() req: any) {
@@ -225,14 +250,14 @@ async getEPSPeriodoStatus(@Request() req: any) {
   }
 
   // ✅ ENDPOINT PARA SUBIR ARCHIVO EXCEL
-  @Post('upload-excel')
+  @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
   async uploadExcel(
     @UploadedFile() file: Express.Multer.File,
     @Body() uploadDto: UploadExcelDto,
     @Request() req: any
   ) {
-    console.log('📤 AdresController: POST /adres/upload-excel', {
+    console.log('📤 AdresController: POST /adres/upload', {
       user: req.user?.email || 'No user',
       fileName: file?.originalname,
       fileSize: file?.size,
