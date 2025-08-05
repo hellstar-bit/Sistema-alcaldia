@@ -2,7 +2,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 export class TendenciaEvolucionDto {
-  @ApiProperty({ description: 'Período', example: 'Enero 2024' })
+  @ApiProperty({ description: 'Período', example: 'Enero 2025' })
   periodo: string;
 
   @ApiProperty({ description: 'Cartera total del período', example: 1200000000 })

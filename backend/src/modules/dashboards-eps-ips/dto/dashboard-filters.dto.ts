@@ -10,7 +10,7 @@ export enum TipoAnalisisEnum {
 }
 
 export class DashboardFiltersDto {
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'IDs de EPS a filtrar',
     type: [String],
     example: ['eps-1', 'eps-2']
@@ -20,7 +20,7 @@ export class DashboardFiltersDto {
   @IsString({ each: true })
   epsIds?: string[];
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'IDs de IPS a filtrar',
     type: [String],
     example: ['ips-1', 'ips-2']
@@ -30,7 +30,7 @@ export class DashboardFiltersDto {
   @IsString({ each: true })
   ipsIds?: string[];
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'IDs de períodos a filtrar',
     type: [String],
     example: ['periodo-1', 'periodo-2']
@@ -40,23 +40,23 @@ export class DashboardFiltersDto {
   @IsString({ each: true })
   periodoIds?: string[];
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Fecha de inicio del filtro',
-    example: '2024-01-01'
+    example: '2025-01-01'
   })
   @IsOptional()
   @IsString()
   fechaInicio?: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Fecha de fin del filtro',
-    example: '2024-12-31'
+    example: '2025-12-31'
   })
   @IsOptional()
   @IsString()
   fechaFin?: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Tipo de análisis a realizar',
     enum: TipoAnalisisEnum,
     example: TipoAnalisisEnum.AMBOS
@@ -65,7 +65,7 @@ export class DashboardFiltersDto {
   @IsEnum(TipoAnalisisEnum)
   tipoAnalisis?: TipoAnalisisEnum;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Incluir datos históricos para trazabilidad',
     example: false
   })
@@ -74,7 +74,7 @@ export class DashboardFiltersDto {
   @Transform(({ value }) => value === 'true' || value === true)
   incluirHistorico?: boolean;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Número de página para paginación',
     example: 1,
     minimum: 1
@@ -85,7 +85,7 @@ export class DashboardFiltersDto {
   @Type(() => Number)
   page?: number;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'Cantidad de registros por página',
     example: 50,
     minimum: 1,

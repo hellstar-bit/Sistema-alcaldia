@@ -129,11 +129,11 @@ const MOCK_DASHBOARD_DATA = {
       id: '1',
       type: 'upload' as const,
       title: 'Carga de archivo de cartera',
-      description: 'Archivo NUEVA EPS - Diciembre 2024 procesado exitosamente',
+      description: 'Archivo NUEVA EPS - Diciembre 2025 procesado exitosamente',
       timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 min ago
       status: 'success' as const,
       user: 'María González',
-      metadata: { fileSize: '2.4 MB', recordCount: 1247, eps: 'NUEVA EPS', period: 'Dic 2024' }
+      metadata: { fileSize: '2.4 MB', recordCount: 1247, eps: 'NUEVA EPS', period: 'Dic 2025' }
     },
     {
       id: '2',
@@ -159,11 +159,11 @@ const MOCK_DASHBOARD_DATA = {
       id: '4',
       type: 'report' as const,
       title: 'Reporte mensual generado',
-      description: 'Informe ejecutivo de Noviembre 2024 disponible',
+      description: 'Informe ejecutivo de Noviembre 2025 disponible',
       timestamp: new Date(Date.now() - 1000 * 60 * 90).toISOString(), // 1.5 hours ago
       status: 'info' as const,
       user: 'Sistema',
-      metadata: { period: 'Nov 2024' }
+      metadata: { period: 'Nov 2025' }
     },
     {
       id: '5',
@@ -239,7 +239,7 @@ export const useDashboardData = () => {
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Control de estado y ciclo de vida
   const mountedRef = useRef(true);
   const loadingRef = useRef(false);
@@ -495,7 +495,7 @@ export const useDashboardData = () => {
   // Función de refresco
   const refreshData = useCallback(() => {
     if (!mountedRef.current) return;
-    
+
     console.log('🔄 Dashboard: Refrescando datos y limpiando cache...');
     dashboardCache.clear();
     hasLoadedRef.current = false;
@@ -505,7 +505,7 @@ export const useDashboardData = () => {
   // Funciones específicas de refresco
   const refreshStats = useCallback(async () => {
     if (!mountedRef.current) return;
-    
+
     try {
       dashboardCache.clear();
       const newStats = await fetchStats();
@@ -517,7 +517,7 @@ export const useDashboardData = () => {
 
   const refreshSystemStatus = useCallback(async () => {
     if (!mountedRef.current) return;
-    
+
     try {
       const newStatus = await fetchSystemStatus();
       setSystemStatus(newStatus);
@@ -549,7 +549,7 @@ export const useDashboardData = () => {
 export const useDataFormatting = () => {
   const formatCurrency = useCallback((value: number, compact: boolean = false): string => {
     if (!value && value !== 0) return '$0';
-    
+
     if (compact) {
       if (value >= 1000000000) return `${(value / 1000000000).toFixed(1)}B`;
       if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
@@ -566,7 +566,7 @@ export const useDataFormatting = () => {
 
   const formatNumber = useCallback((value: number, compact: boolean = false): string => {
     if (!value && value !== 0) return '0';
-    
+
     if (compact) {
       if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
       if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
@@ -603,7 +603,7 @@ export const useDataFormatting = () => {
     if (diffMins < 60) return `Hace ${diffMins} min`;
     if (diffHours < 24) return `Hace ${diffHours}h`;
     if (diffDays < 7) return `Hace ${diffDays} días`;
-    
+
     return formatDate(dateString);
   }, [formatDate]);
 
