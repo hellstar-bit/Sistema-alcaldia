@@ -170,74 +170,114 @@ export const GraficasCartera: React.FC<GraficasCarteraProps> = ({ filters, loadi
 
   // ✅ CORRECCIÓN PRINCIPAL: Datos para distribución por EPS
   const distribucionEPS = React.useMemo(() => {
-    // Usar datos basados en el screenshot
+  console.log('🔍 Calculando distribución EPS...');
+  console.log('safeCarteraData length:', safeCarteraData.length);
+
+  if (!safeCarteraData.length) {
+    console.log('⚠️ No hay datos de cartera, usando datos de fallback...');
+    
+    // Datos de fallback para EPS colombianas
     const fallbackData = [
-      { nombre: 'NUEVA EPS', valor: 213676736741, participacion: 26.2 },
-      { nombre: 'FAMISANAR', valor: 118262563948, participacion: 14.5 },
-      { nombre: 'SANITAS', valor: 112310070734, participacion: 13.8 },
-      { nombre: 'COMPENSAR', valor: 93775918951, participacion: 11.5 },
-      { nombre: 'SURA', valor: 82156247892, participacion: 10.1 },
-      { nombre: 'COOSALUD', valor: 71234567890, participacion: 8.7 },
-      { nombre: 'SALUD TOTAL', valor: 65432109876, participacion: 8.0 },
-      { nombre: 'MUTUALSER', valor: 57890123456, participacion: 7.1 }
+      { nombre: 'NUEVA EPS', valor: 45000000000, participacion: 22.5 },
+      { nombre: 'COMPENSAR', valor: 38000000000, participacion: 19.0 },
+      { nombre: 'FAMISANAR', valor: 32000000000, participacion: 16.0 },
+      { nombre: 'SANITAS', valor: 28000000000, participacion: 14.0 },
+      { nombre: 'SURA', valor: 24000000000, participacion: 12.0 },
+      { nombre: 'COOSALUD', valor: 18000000000, participacion: 9.0 },
+      { nombre: 'SALUD TOTAL', valor: 12000000000, participacion: 6.0 },
+      { nombre: 'MUTUALSER', valor: 8000000000, participacion: 4.0 }
     ];
+    
+    return fallbackData;
+  }
 
-    if (!safeCarteraData.length) {
-      console.log('📊 Usando datos de fallback para distribución EPS:', fallbackData);
-      return fallbackData;
+  // Agrupar datos por EPS
+  const epsGrouped = safeCarteraData.reduce((acc: any, item: any) => {
+    if (!item.epsNombre || typeof item.valorActual !== 'number') {
+      return acc;
     }
 
-    const agrupacion = new Map<string, number>();
-    safeCarteraData.forEach(item => {
-      if (item.epsNombre && typeof item.valorActual === 'number') {
-        agrupacion.set(item.epsNombre, (agrupacion.get(item.epsNombre) || 0) + item.valorActual);
-      }
-    });
-
-    const total = Array.from(agrupacion.values()).reduce((sum, val) => sum + val, 0);
-
-    const result = Array.from(agrupacion.entries())
-      .map(([nombre, valor]) => ({
-        nombre,
-        valor,
-        participacion: total > 0 ? (valor / total) * 100 : 0
-      }))
-      .sort((a, b) => b.valor - a.valor)
-      .slice(0, 8);
-
-    console.log('📊 Distribución EPS calculada:', result);
-    return result.length > 0 ? result : fallbackData;
-  }, [safeCarteraData]);
-
-  // ✅ CORRECCIÓN: Datos para TreeMap
-  const treeMapData = React.useMemo(() => {
-    const data = distribucionEPS.map((item, index) => ({
-      name: item.nombre,
-      size: item.valor,
-      participacion: item.participacion,
-      color: `hsl(${index * 45}, 70%, 60%)`,
-      index: index
-    }));
-
-    console.log('🗺️ TreeMap data preparada:', data);
-    return data;
-  }, [distribucionEPS]);
-
-  // Debug logs
-  useEffect(() => {
-    console.log('🔍 Debug - Estado actual de datos:');
-    console.log('- safeCarteraData length:', safeCarteraData.length);
-    console.log('- distribucionEPS length:', distribucionEPS.length);
-    console.log('- treeMapData length:', treeMapData.length);
-    console.log('- selectedChart:', selectedChart);
-
-    if (distribucionEPS.length > 0) {
-      console.log('- Primer item distribución:', distribucionEPS[0]);
+    const epsName = item.epsNombre.trim();
+    
+    if (!acc[epsName]) {
+      acc[epsName] = {
+        nombre: epsName,
+        valor: 0,
+        count: 0
+      };
     }
-    if (treeMapData.length > 0) {
-      console.log('- Primer item TreeMap:', treeMapData[0]);
-    }
-  }, [safeCarteraData, distribucionEPS, treeMapData, selectedChart]);
+    
+    acc[epsName].valor += item.valorActual;
+    acc[epsName].count += 1;
+    
+    return acc;
+  }, {});
+
+  // Convertir a array y calcular participaciones
+  const epsArray = Object.values(epsGrouped) as any[];
+  const total = epsArray.reduce((sum: number, eps: any) => sum + eps.valor, 0);
+
+  const result = epsArray
+    .map((eps: any) => ({
+      nombre: eps.nombre,
+      valor: eps.valor,
+      participacion: total > 0 ? (eps.valor / total) * 100 : 0,
+      count: eps.count
+    }))
+    .sort((a, b) => b.valor - a.valor)
+    .slice(0, 8); // Limitar a las 8 EPS principales
+
+  console.log('📊 Distribución EPS calculada:', result);
+  console.log('Total valor:', total);
+  
+  return result;
+}, [safeCarteraData]);
+
+// ✅ CORRECCIÓN: Datos para TreeMap con validación mejorada
+const treeMapData = React.useMemo(() => {
+  if (!distribucionEPS || distribucionEPS.length === 0) {
+    console.log('⚠️ No hay datos de distribución EPS para TreeMap');
+    return [];
+  }
+
+  const data = distribucionEPS.map((item, index) => ({
+    name: item.nombre,
+    size: item.valor,
+    participacion: item.participacion || 0,
+    color: `hsl(${index * 45}, 70%, 60%)`,
+    index: index
+  }));
+
+  console.log('🗺️ TreeMap data preparada:', data);
+  return data;
+}, [distribucionEPS]);
+
+// ✅ CORRECCIÓN: Condiciones de renderizado mejoradas
+const shouldRenderDistribucion = React.useMemo(() => {
+  const hasData = distribucionEPS && distribucionEPS.length > 0;
+  const hasValidValues = distribucionEPS.some(item => item.valor > 0);
+  
+  console.log('🎯 shouldRenderDistribucion check:', {
+    hasData,
+    hasValidValues,
+    dataLength: distribucionEPS?.length || 0
+  });
+  
+  return hasData && hasValidValues;
+}, [distribucionEPS]);
+
+const shouldRenderTreeMap = React.useMemo(() => {
+  const hasData = treeMapData && treeMapData.length > 0;
+  const hasValidSizes = treeMapData.some(item => item.size > 0);
+  
+  console.log('🗺️ shouldRenderTreeMap check:', {
+    hasData,
+    hasValidSizes,
+    dataLength: treeMapData?.length || 0
+  });
+  
+  return hasData && hasValidSizes;
+}, [treeMapData]);
 
   // ✅ Datos para relaciones críticas con validaciones
   const relacionesCriticas = React.useMemo(() => {
@@ -306,15 +346,6 @@ export const GraficasCartera: React.FC<GraficasCarteraProps> = ({ filters, loadi
         return value.toString();
     }
   };
-
-  // Verificaciones de renderizado
-  const shouldRenderDistribucion = distribucionEPS.length > 0 &&
-    distribucionEPS.every(item => item.valor > 0 && item.nombre);
-
-  const shouldRenderTreeMap = treeMapData.length > 0 &&
-    treeMapData.every(item => item.size > 0 && item.name);
-
-  console.log('🎯 Render conditions:', { shouldRenderDistribucion, shouldRenderTreeMap });
 
   // Estados de carga
   if (loadingData || loading) {
@@ -434,119 +465,133 @@ export const GraficasCartera: React.FC<GraficasCarteraProps> = ({ filters, loadi
                 </ResponsiveContainer>
               )}
 
-              {/* ✅ CORRECCIÓN: Distribución por EPS */}
-              {selectedChart === 'distribucion' && shouldRenderDistribucion && (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={distribucionEPS}
-                    layout="horizontal"
-                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis
-                      type="number"
-                      tickFormatter={(value) => `${(value / 1000000000).toFixed(1)}B`}
-                      domain={[0, 'dataMax']}
-                    />
-                    <YAxis
-                      type="category"
-                      dataKey="nombre"
-                      width={100}
-                      tick={{ fontSize: 12 }}
-                    />
-                    <Tooltip
-                      formatter={(value: any) => [formatCurrency(value), 'Valor de Cartera']}
-                      labelFormatter={(label) => `EPS: ${label}`}
-                    />
-                    <Bar
-                      dataKey="valor"
-                      fill="#10B981"
-                      radius={[0, 4, 4, 0]}
-                      name="Valor de Cartera"
-                    >
-                      {distribucionEPS.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={`hsl(${index * 45}, 70%, 60%)`} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-
-              {/* ✅ CORRECCIÓN: TreeMap de Cartera */}
-              {selectedChart === 'treemap' && shouldRenderTreeMap && (
-                <ResponsiveContainer width="100%" height="100%">
-                  <Treemap
-                    data={treeMapData}
-                    dataKey="size"
-                    aspectRatio={4 / 3}
-                    stroke="#ffffff"
-                    strokeWidth={2}
-                    content={({ x, y, width, height, payload }) => {
-                      // Verificar que tengamos las propiedades necesarias
-                      if (!payload || width < 20 || height < 20) return null;
-
-                      const backgroundColor = payload.color || `hsl(${(payload.index || 0) * 45}, 70%, 60%)`;
-                      const textColor = '#ffffff';
-                      const fontSize = Math.min(width / 8, height / 6, 16);
-
-                      return (
-                        <g>
-                          <rect
-                            x={x}
-                            y={y}
-                            width={width}
-                            height={height}
-                            style={{
-                              fill: backgroundColor,
-                              stroke: '#fff',
-                              strokeWidth: 2,
-                              strokeOpacity: 1,
-                            }}
+              {/* ✅ CORRECCIÓN: Gráfica de Distribución EPS */}
+                {selectedChart === 'distribucion' && (
+                  <div className="h-full">
+                    {shouldRenderDistribucion ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={distribucionEPS}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            label={({ nombre, participacion }) => `${nombre}: ${participacion.toFixed(1)}%`}
+                            outerRadius={120}
+                            fill="#8884d8"
+                            dataKey="valor"
+                          >
+                            {distribucionEPS.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={`hsl(${index * 45}, 70%, 60%)`} />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            formatter={(value: any) => [formatCurrency(value), 'Valor Cartera']}
                           />
-                          {width > 60 && height > 40 && (
-                            <>
-                              {/* Nombre de la EPS */}
-                              <text
-                                x={x + width / 2}
-                                y={y + height / 2 - fontSize / 2}
-                                textAnchor="middle"
-                                fill={textColor}
-                                fontSize={Math.max(fontSize - 2, 12)}
-                                fontWeight="bold"
-                              >
-                                {payload.name}
-                              </text>
-                              {/* Valor */}
-                              <text
-                                x={x + width / 2}
-                                y={y + height / 2 + fontSize / 2}
-                                textAnchor="middle"
-                                fill={textColor}
-                                fontSize={Math.max(fontSize - 4, 10)}
-                              >
-                                ${(payload.size / 1000000000).toFixed(1)}B
-                              </text>
-                              {/* Participación */}
-                              {height > 60 && (
-                                <text
-                                  x={x + width / 2}
-                                  y={y + height / 2 + fontSize * 1.2}
-                                  textAnchor="middle"
-                                  fill={textColor}
-                                  fontSize={Math.max(fontSize - 6, 9)}
-                                  opacity={0.9}
-                                >
-                                  {payload.participacion?.toFixed(1)}%
-                                </text>
-                              )}
-                            </>
+                          <Legend />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-center text-gray-500">
+                          <ExclamationTriangleIcon className="h-12 w-12 mx-auto mb-4" />
+                          <p className="text-lg font-medium">No hay datos para mostrar</p>
+                          <p className="text-sm">
+                            {loadingData ? 'Cargando datos...' : 'No se encontraron datos de distribución EPS'}
+                          </p>
+                          {distribucionEPS.length > 0 && (
+                            <p className="text-xs mt-2">
+                              Debug: {distribucionEPS.length} EPS disponibles
+                            </p>
                           )}
-                        </g>
-                      );
-                    }}
-                  />
-                </ResponsiveContainer>
-              )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ✅ CORRECCIÓN: TreeMap de Cartera */}
+                {selectedChart === 'treemap' && (
+                  <div className="h-full">
+                    {shouldRenderTreeMap ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <Treemap
+                          data={treeMapData}
+                          dataKey="size"
+                          aspectRatio={4 / 3}
+                          stroke="#ffffff"
+                          strokeWidth={2}
+                          content={({ x, y, width, height, payload }) => {
+                            // Verificar que tengamos las propiedades necesarias
+                            if (!payload || !payload.name || width < 30 || height < 30) {
+                              return null;
+                            }
+
+                            const backgroundColor = payload.color || `hsl(${(payload.index || 0) * 45}, 70%, 60%)`;
+                            const textColor = '#ffffff';
+                            const fontSize = Math.min(width / 10, height / 8, 14);
+                            const participacion = payload.participacion || 0;
+
+                            return (
+                              <g>
+                                <rect
+                                  x={x}
+                                  y={y}
+                                  width={width}
+                                  height={height}
+                                  style={{
+                                    fill: backgroundColor,
+                                    stroke: '#fff',
+                                    strokeWidth: 2,
+                                    strokeOpacity: 1,
+                                  }}
+                                />
+                                {fontSize > 8 && (
+                                  <>
+                                    <text
+                                      x={x + width / 2}
+                                      y={y + height / 2 - 5}
+                                      textAnchor="middle"
+                                      fill={textColor}
+                                      fontSize={fontSize}
+                                      fontWeight="bold"
+                                    >
+                                      {payload.name}
+                                    </text>
+                                    <text
+                                      x={x + width / 2}
+                                      y={y + height / 2 + fontSize}
+                                      textAnchor="middle"
+                                      fill={textColor}
+                                      fontSize={fontSize * 0.8}
+                                    >
+                                      {participacion.toFixed(1)}%
+                                    </text>
+                                  </>
+                                )}
+                              </g>
+                            );
+                          }}
+                        />
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-center text-gray-500">
+                          <ExclamationTriangleIcon className="h-12 w-12 mx-auto mb-4" />
+                          <p className="text-lg font-medium">TreeMap no disponible</p>
+                          <p className="text-sm">
+                            {loadingData ? 'Cargando datos...' : 'No hay datos suficientes para el TreeMap'}
+                          </p>
+                          {treeMapData.length > 0 && (
+                            <p className="text-xs mt-2">
+                              Debug: {treeMapData.length} items disponibles
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
               {/* Relaciones Críticas */}
               {selectedChart === 'relaciones' && relacionesCriticas.length > 0 && (
