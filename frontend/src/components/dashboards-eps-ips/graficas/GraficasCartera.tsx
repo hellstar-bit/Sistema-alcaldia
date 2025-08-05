@@ -74,7 +74,7 @@ export const GraficasCartera: React.FC<GraficasCarteraProps> = ({ filters, loadi
       console.log('📊 Datos de cartera recibidos:', { cartera, tendencias, metricas });
 
       // Validar que cartera sea un array
-      let carteraArray = [];
+      let carteraArray: any[] = [];
       if (Array.isArray(cartera)) {
         carteraArray = cartera;
       } else if (cartera && Array.isArray(cartera.data)) {
